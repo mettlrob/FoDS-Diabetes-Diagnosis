@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 
 # 1. Daten laden
-df = pd.read_csv('../../data/diabetes.csv')
+df = pd.read_csv('../../data/cleaned_diabetes.csv')
 
 
 # 2. Features und Zielspalte
