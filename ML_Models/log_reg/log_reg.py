@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 
 # 1. Daten laden
-df = pd.read_csv('../../data/whole_cleaned_diabetes.csv')
+df = pd.read_csv('../../Data_Processing/whole_cleaned_dataset.csv')
 
 
 # 2. Features und Zielspalte
