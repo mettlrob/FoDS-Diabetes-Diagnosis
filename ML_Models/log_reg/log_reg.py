@@ -116,7 +116,7 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), 1):
     plt.show()
     """
 
-
+"""ROC KURVEN FÜR ALLE FOLDS + MENA ROC KURVE"""
 # ROC-Kurven aller Folds plotten
 plt.figure(figsize=(10, 8))
 for i, tpr in enumerate(tprs):
@@ -137,6 +137,9 @@ plt.legend(loc="lower right")
 plt.grid()
 plt.show()
 
+#save fig
+plt.savefig('../../output/Log_R_output/ROC_kurven_LogR.png')
+
 
 """
 # Nur Durchschnittliche ROC-Kurve zeichnen
@@ -155,6 +158,7 @@ plt.show()
 """
 
 
+"""FEATURE IMPORTANCE"""
 # Koeffizienten aus dem Modell ziehen (für LogReg)
 coefs = best_model.coef_[0]
 
@@ -185,8 +189,11 @@ plt.grid(axis='x', linestyle='--', alpha=1)
 plt.tight_layout()
 plt.show()
 
+#save fig
+plt.savefig('../../output/Log_R_output/feature_importance_LogR.png')
 
 
+"""MEAN CONFUSION MATRIX"""
 # Mean Confusion Matrix berechnen und plotten
 mean_conf_matrix = np.mean(conf_matrices, axis=0)
 
@@ -199,6 +206,8 @@ plt.ylabel('True Label')
 plt.title('Mean Confusion Matrix')
 plt.show()
 
+#save fig
+plt.savefig('../../output/Log_R_output/confusion_matrix_LogR.png')
 
 
 # Zusammenfassung der Metriken
