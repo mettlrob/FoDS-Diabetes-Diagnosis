@@ -1,7 +1,7 @@
 #%%
 import pandas as pd
 import numpy as np
-
+from sklearn.metrics import make_scorer, f1_score, recall_score, precision_score
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score, StratifiedKFold
 from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix, classification_report, roc_auc_score, roc_curve
@@ -10,7 +10,24 @@ import seaborn as sns
 import warnings
 warnings.filterwarnings("ignore")
 
-data = pd.read_csv('../../data/cleaned_diabetes.csv')
+
+#create helper function to plot ROC curves in one figure
+def add_identity(axes, *line_args, **line_kwargs):
+    identity, = axes.plot([], [], *line_args, **line_kwargs)
+    def callback(axes):
+        low_x, high_x = axes.get_xlim()
+        low_y, high_y = axes.get_ylim()
+        low = max(low_x, low_y)
+        high = min(high_x, high_y)
+        identity.set_data([low, high], [low, high])
+    callback(axes)
+    axes.callbacks.connect('xlim_changed', callback)
+    axes.callbacks.connect('ylim_changed', callback)
+    return axes
+
+
+
+data = pd.read_csv('../../Data_Processing/no_transformer_data.csv')
 
 X = data.drop(columns = ['Outcome'])
 y = data['Outcome']
@@ -19,7 +36,8 @@ y = data['Outcome']
 """define hyperparameter grid"""
 param_grid = {
     'C': [0.1, 1, 10],
-    'kernel': ['linear', 'rbf', 'poly'],
+    'kernel': ['linear'],
+    #'kernel': ['linear','rbf', 'poly'],
     'gamma': ['scale', 'auto'] #relevant for rbf
 }
 
@@ -39,6 +57,17 @@ f1_list = []
 precision_list = []
 recall_list = []
 
+fpr_list = []
+tpr_list = []
+
+coef_list = [] #this is for feature importance.
+
+scoring = { 
+    'f1' : make_scorer(f1_score, average = 'binary', pos_label = 1),
+    'recall' : make_scorer(recall_score, pos_label = 1),
+    'precision' : make_scorer(precision_score, pos_label = 1)
+
+}
 """"Outer CV loop"""
 for train_idx, test_idx in outer_cv.split(X, y):
 
@@ -55,17 +84,44 @@ for train_idx, test_idx in outer_cv.split(X, y):
         estimator = SVC(probability= True, class_weight = 'balanced', random_state=42),
         param_grid = param_grid,
         cv = inner_cv,
-        scoring = 'roc_auc',
-        n_jobs = -1
+        scoring = scoring, #for overview and interpretation.
+        refit = 'f1', #choose the best model based on f1 score
+        n_jobs = -1,
+        return_train_score = True
     )
+
 
     grid_search.fit(X_train, y_train)
 
+
+
+
+
     print(f"Best parameters: {grid_search.best_params_}")
 
-    """Evaluate best model on outer test set"""
+    results = pd.DataFrame(grid_search.cv_results_)
+
+    summary_results = results[[
+        'param_C',
+        'param_kernel',
+        'mean_test_f1',
+        'mean_test_recall',
+        'mean_test_precision',
+        'std_test_f1',
+        'std_test_recall',
+        'std_test_precision',
+    ]]
+
+    summary_sorted = summary_results.sort_values(by = 'mean_test_f1', ascending = False)
+    print("\n--- Inner CV Results (sorted by F1) ---")
+    print(summary_sorted.head())
+
+    """--- Evaluate best model on outer test set ---"""
 
     best_model = grid_search.best_estimator_
+
+    coef_list.append(best_model.coef_.flatten()) #for feature importance
+
 
     y_pred = best_model.predict(X_test)
     y_pred_proba = best_model.predict_proba(X_test)[:, 1]
@@ -84,23 +140,28 @@ for train_idx, test_idx in outer_cv.split(X, y):
     precision_list.append(report['1']['precision'])
     recall_list.append(report['1']['recall'])
 
-    """"Plot ROC curve"""
+    """"--- Plot ROC curve ---"""
     fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
+    fpr_list.append(fpr) #to collect all fpr values for plotting in one figure below.
+    tpr_list.append(tpr) # to collect all tpr values for plotting in one figure below.
     plt.figure()
     plt.plot(fpr, tpr, label=f'ROC Fold {outer_fold} (AUC = {roc_auc:.2f})')
     plt.plot([0, 1], [0, 1], 'k--')
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('ROC Curve Fold{outer_fold}')
+    plt.title(f'ROC Curve Fold {outer_fold}')
     plt.legend()
-    roc_path = f'../../output/SVM_output/ROC/ROC_Fold{outer_fold}.png'
+    roc_path = f'../../output/SVM_output/ROC/ROC_Fold_{outer_fold}.png'
 
     plt.savefig(roc_path)
     plt.close()
 
-    outer_fold += 1
+    #outer_fold += 1
 
-    """Summary of outer fold ROC AUCs"""
+
+
+
+    """--- Summary of outer fold ROC AUCs ---"""
 
     print("\n ==== Outer Fold ROC AUC Scores ===")
     for i, auc in enumerate(roc_auc_list, 1):
@@ -108,8 +169,9 @@ for train_idx, test_idx in outer_cv.split(X, y):
 
     print(f"\nMean ROC AUC: {np.mean(roc_auc_list):.3f}")
     print(f"Std ROC AUC: {np.std(roc_auc_list):.3f}")
+    print("")
 
-    """Optional: Average confusion matrix """
+    """--- Optional: Average confusion matrix ---"""
 
     cm = confusion_matrix(y_test, y_pred) #recompute confusion matrix for the current fold
 
@@ -118,12 +180,33 @@ for train_idx, test_idx in outer_cv.split(X, y):
     plt.figure(figsize=(6,5))
     sns.heatmap(cm_percent, annot = True, fmt = '.2f', cmap = 'Blues', cbar = False, 
                 xticklabels = ['No Diabetes', 'Diabetes'], yticklabels = ['No Diabetes', 'Diabetes'])
-    plt.title('Confusion Matrix Fold {outer_fold}')
+    plt.title(f'Confusion Matrix Fold {outer_fold}')
     plt.ylabel('True Label')
     plt.xlabel('Predicted Label')
-    cm_path = f'../../output/SVM_output/Confusion_Matrix/CM_Fold{outer_fold}.png'
+    cm_path = f'../../output/SVM_output/CM/CM_Fold_{outer_fold}.png'
     plt.savefig(cm_path)
     plt.close()
+    outer_fold += 1 
+    
+#plot ROC curves for all outer folds in one figure.
+plt.figure(figsize=(8, 6))
+ax = plt.gca()
+for i in range(len(fpr_list)):
+    ax.plot(fpr_list[i], tpr_list[i], label = f'Fold {i+1} AUC = {roc_auc_list[i]:.2f}')
+
+add_identity(ax, color = 'r', ls = '--', label = 'Random Classifier')
+
+ax.set_xlabel('False Positive Rate')
+ax.set_ylabel('True Positive Rate')
+ax.set_title('ROC Curves for SVM Model Across Outer Folds')
+ax.legend(loc = 'lower right')
+ax.set_xlim([0, 1])
+ax.set_ylim([0, 1])
+ax.grid(True, linestyle='--', alpha=0.5)
+
+plt.tight_layout()
+plt.savefig('../../output/SVM_output/All_ROC_SVM.png')
+plt.close()
 
 #plot mean Coonfusion matrix across all outer folds
 mean_cm = np.mean(all_conf_matrices, axis = 0)
@@ -131,19 +214,49 @@ mean_cm_percent = mean_cm/ mean_cm.sum(axis = 1, keepdims = True) *100
 plt.figure(figsize=(6,5))
 sns.heatmap(mean_cm_percent, annot = True, fmt = '.2f', cmap = 'Blues', cbar = False, 
             xticklabels = ['No Diabetes', 'Diabetes'], yticklabels = ['No Diabetes', 'Diabetes'])
-plt.title('Mean Confusion Matrix (%) across Outer Folds')
+plt.title('Mean Accuracy (%) across Outer Folds')
 plt.ylabel('True Label')
 plt.xlabel('Predicted Label')
 cm__mean_path = f'../../output/SVM_output/Mean_CM.png'
 plt.savefig(cm__mean_path)
 plt.close()
 
-print(f'Mean ROC AUC: {np.mean(roc_auc_list):.3f}')
-print(f'Std ROC AUC: {np.std(roc_auc_list):.3f}')
-print(f'Mean F1 Score: {np.mean(f1_list):.3f}')
-print(f'Mean Precision: {np.mean(precision_list):.3f}')
-print(f'Mean Recall: {np.mean(recall_list):.3f}')
+print(f'ROC AUC: {np.mean(roc_auc_list):.3f} ± {np.std(roc_auc_list):.3f}')
+print(f'F1 Score: {np.mean(f1_list):.3f} ± {np.std(f1_list):.3f}')
+print(f'Precision: {np.mean(precision_list):.3f} ± {np.std(precision_list):.3f}')
+print(f'Recall: {np.mean(recall_list):.3f} ± {np.std(recall_list):.3f}')
 
 
 
+"""The best results were obtained using a linear kernel instead of rbf or poly. This suggest that the data is enough linearly separable.
+that means that there is a hyperplane that can separate the two classes well enough without needing curved
+or flexible boundaries. the relationships between the features and the class label are additive and not heavily interacting."""
 
+"""--- Feature Importance ---"""
+
+
+coef_array = np.array(coef_list) #shape: (n_folds, n_features)
+avg_coefs = np.mean(coef_array, axis = 0) #average across folds
+
+importance_df = pd.DataFrame({
+    'Feature' : X.columns,
+    'AvgWeight' : avg_coefs,
+    'AbsAvgWeight' : np.abs(avg_coefs)
+
+}).sort_values(by = 'AbsAvgWeight', ascending = False)
+
+# importance_df.to_csv('../../output/SVM_output/Feature_Importance.csv', index = False)
+
+#Plot top 10 features
+
+plt.figure(figsize=(10, 6))
+sns.barplot(data = importance_df.head(10), x = 'AbsAvgWeight', y = 'Feature', palette = 'viridis')
+plt.title('Top 10 Averaged Feature Importances from Linear SVM (across Folds)')
+plt.xlabel('Absolute Averaged Coefficient Weight')
+plt.ylabel('Feature')
+plt.tight_layout()
+plt.savefig('../../output/SVM_output/SVM_feature_importance.png')
+plt.close()
+"""Linear SVM makes predictions using a weighted sum of the input features. The learned coefficients (wi) 
+directly represent the influence of each feature on the decision boundary. Larger absolute values mean 
+stronger influence; positive weights push toward the positive class (diabetes), negative toward teh negative class."""
