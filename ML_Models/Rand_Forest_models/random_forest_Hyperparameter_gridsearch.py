@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # --- Schritt 1: Daten laden ---
 print("Schritt 1: Daten laden...")
 try:
-    data = pd.read_csv('Dataset/diabetes.csv')
+    data = pd.read_csv('data/diabetes.csv')
     print("Daten erfolgreich geladen.")
    
 except FileNotFoundError:
