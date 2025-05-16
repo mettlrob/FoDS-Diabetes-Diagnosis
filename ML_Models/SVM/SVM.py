@@ -34,12 +34,16 @@ y = data['Outcome']
 
 
 """define hyperparameter grid"""
-param_grid = {
-    'C': [0.1, 1, 10],
-    'kernel': ['linear'],
-    #'kernel': ['linear','rbf', 'poly'],
-    'gamma': ['scale', 'auto'] #relevant for rbf
-}
+param_grid = [
+    { 'C': [0.1, 1, 10], 'kernel' : ['linear']},
+    # { 'C': [0.1, 1, 10], 'kernel' : ['rbf'], 'gamma' : ['scale', 'auto']},
+    # { 'C': [0.1, 1, 10], 'kernel' : ['poly'], 'degree' : [2, 3], 'gamma' : ['scale', 'auto']}
+]
+    
+    # 'kernel': ['linear'],
+    # #'kernel': ['linear','rbf', 'poly'],
+    # 'gamma': ['scale', 'auto'] #relevant for rbf
+
 
 """"Set up outer CV"""
 outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -225,7 +229,7 @@ print(f'ROC AUC: {np.mean(roc_auc_list):.3f} ± {np.std(roc_auc_list):.3f}')
 print(f'F1 Score: {np.mean(f1_list):.3f} ± {np.std(f1_list):.3f}')
 print(f'Precision: {np.mean(precision_list):.3f} ± {np.std(precision_list):.3f}')
 print(f'Recall: {np.mean(recall_list):.3f} ± {np.std(recall_list):.3f}')
-
+print(f'Accuracy: {np.mean([report["accuracy"] for report in all_reports]):.3f} ± {np.std([report["accuracy"] for report in all_reports]):.3f}')
 
 
 """The best results were obtained using a linear kernel instead of rbf or poly. This suggest that the data is enough linearly separable.
@@ -247,11 +251,11 @@ importance_df = pd.DataFrame({
 
 # importance_df.to_csv('../../output/SVM_output/Feature_Importance.csv', index = False)
 
-#Plot top 10 features
+#Plot all 8 features in descending order of importance
 
 plt.figure(figsize=(10, 6))
 sns.barplot(data = importance_df.head(10), x = 'AbsAvgWeight', y = 'Feature', palette = 'viridis')
-plt.title('Top 10 Averaged Feature Importances from Linear SVM (across Folds)')
+plt.title('Ordered Averaged Feature Importances from Linear SVM (across Folds)')
 plt.xlabel('Absolute Averaged Coefficient Weight')
 plt.ylabel('Feature')
 plt.tight_layout()
