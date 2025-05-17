@@ -5,20 +5,20 @@
 
 
 
-# 0. Bibliotheken importieren
 # Bibliotheken importieren
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, KFold
-from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score, roc_auc_score, roc_curve, confusion_matrix
+from sklearn.metrics import make_scorer, precision_score, recall_score, f1_score, accuracy_score, roc_auc_score, roc_curve, confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 
 
 # Daten laden
-df = pd.read_csv('../../Data_Processing/whole_cleaned_dataset.csv')
+#df = pd.read_csv('../../Data_Processing/whole_cleaned_dataset.csv')
+df = pd.read_csv('../../Data_Processing/no_transformer_data.csv')
 
 # Features und Zielspalte
 X = df.drop('Outcome', axis=1)
@@ -30,33 +30,36 @@ skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
 #skf = KFold(n_splits=5, shuffle=True, random_state=0)
 
 
-# Parameter Grid Values
 param_grid = {
-    'C':      [0.01, 0.1, 1, 10, 100],   # Best Result = 1
+    #'C':      [0.01, 0.1, 1, 10, 100],   # Best Result = 1  ;  Später war 0.1 Bestes Resultat
     #'C':    [0.8, 0.9, 1, 1.1, 1,2],     # Best Result = 0.8
     #'C':    [0.5, 0.6, 0.7, 0.8, 0.9],  # Best Result = 0.8
     #'C':    [0.75, 0.775, 0.8, 0.825, 0.85],    # Best Result = 0.825
+    'C':    [0.05, 0.1, 0.15, 0.2, 0.25],        # Best Result = 0.1
     'penalty':['l1', 'l2'],
     'solver': ['liblinear'],  # liblinear unterstützt l1 und l2
 }
 
 
-# GridSearchCV mit AUC als Optimierungsziel
+# GridSearchCV mit AUC oder Recall als Optimierungsziel
 grid = GridSearchCV(
     estimator = LogisticRegression(class_weight='balanced', max_iter=1000),
     param_grid = param_grid,
     cv         = skf,
-    scoring    = 'roc_auc',
+    #scoring    = 'roc_auc',
+    scoring    = 'recall',
     n_jobs     = -1,        # alle CPUs nutzen
     verbose    = 1
 )
 
-#Hyperparameter Tuning durchführen
+
 # Grid Search durchführen
 grid.fit(X, y)
 # Resultate zurückgeben
 print("Best Parameters: ", grid.best_params_)
-print("Best Mean AUC:   ", grid.best_score_)
+#print("Best Mean AUC:   ", grid.best_score_)
+print("Best Mean Recall:   ", grid.best_score_)
+
 
 # Bestes Hyperparameter Model Auswählen
 best_model = grid.best_estimator_
@@ -66,6 +69,8 @@ best_model = grid.best_estimator_
 # Metriken speichern
 precision_list = []
 recall_list = []
+specificity_list = []
+accuracy_list = []
 f1_list = []
 auc_list = []
 
@@ -91,7 +96,9 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), 1):
     # Metriken berechnen
     precision_list.append(precision_score(y_test, y_pred))
     recall_list.append(recall_score(y_test, y_pred))
+    specificity_list.append(recall_score(y_test, y_pred, pos_label=0))
     f1_list.append(f1_score(y_test, y_pred))
+    accuracy_list.append(accuracy_score(y_test, y_pred))
     auc = roc_auc_score(y_test, y_proba)
     auc_list.append(auc)
 
@@ -104,7 +111,7 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), 1):
     tpr_interp = np.interp(mean_fpr, fpr, tpr)
     tprs.append(tpr_interp)
 
-    print(f"Fold {fold}: Precision={precision_list[-1]:.2f}, Recall={recall_list[-1]:.2f}, F1={f1_list[-1]:.2f}, AUC={auc:.2f}")
+    print(f"Fold {fold}: Precision={precision_list[-1]:.2f}, Recall={recall_list[-1]:.2f}, Specificity={specificity_list[-1]:.2f}, Accuracy={accuracy_list[-1]:.2f} F1={f1_list[-1]:.2f}, AUC={auc:.2f}")
 
     """
     #Show Confusion Matrix of each Fold
@@ -115,6 +122,8 @@ for fold, (train_idx, test_idx) in enumerate(skf.split(X, y), 1):
     plt.title('Mean Confusion Matrix')
     plt.show()
     """
+
+
 
 """ROC KURVEN FÜR ALLE FOLDS + MENA ROC KURVE"""
 # ROC-Kurven aller Folds plotten
@@ -135,12 +144,15 @@ plt.ylabel('True Positive Rate')
 plt.title('ROC Curve for all Folds')
 plt.legend(loc="lower right")
 plt.grid()
-plt.show()
+
+# Show Plot comment the line if you want to save it
+#plt.show()
 
 #save fig
 plt.savefig('../../output/Log_R_output/ROC_kurven_LogR.png')
 
 
+# Nur Mean Confusion Matrix
 """
 # Nur Durchschnittliche ROC-Kurve zeichnen
 mean_tpr = np.mean(tprs, axis=0)
@@ -187,7 +199,9 @@ plt.xlabel('Absolute Coefficient Value')
 plt.title('Feature Importance (Logistic Regression)')
 plt.grid(axis='x', linestyle='--', alpha=1)
 plt.tight_layout()
-plt.show()
+
+# Show Plot comment the line if you want to save it
+#plt.show()
 
 #save fig
 plt.savefig('../../output/Log_R_output/feature_importance_LogR.png')
@@ -197,14 +211,18 @@ plt.savefig('../../output/Log_R_output/feature_importance_LogR.png')
 # Mean Confusion Matrix berechnen und plotten
 mean_conf_matrix = np.mean(conf_matrices, axis=0)
 
+mean_conf_matrix = mean_conf_matrix / mean_conf_matrix.sum(axis=1, keepdims=True) * 100  # Macht aus absoluten relative Werte für Confusion Matrix
+
 plt.figure(figsize=(6, 5))
-sns.heatmap(mean_conf_matrix, annot=True, fmt=".1f", cmap="Greens", 
+sns.heatmap(mean_conf_matrix, annot=True, fmt=".1f", cmap="Blues", 
             xticklabels=["No Diabetes (0)", "Diabetes (1)"],
             yticklabels=["No Diabetes (0)", "Diabetes (1)"])
 plt.xlabel('Predicted Label')
 plt.ylabel('True Label')
 plt.title('Mean Confusion Matrix')
-plt.show()
+
+# Show Plot comment the line if you want to save it
+#plt.show()
 
 #save fig
 plt.savefig('../../output/Log_R_output/confusion_matrix_LogR.png')
@@ -214,6 +232,8 @@ plt.savefig('../../output/Log_R_output/confusion_matrix_LogR.png')
 metrics = {
     "Precision": (np.mean(precision_list), np.std(precision_list)),
     "Recall": (np.mean(recall_list), np.std(recall_list)),
+    "Specificity": (np.mean(specificity_list), np.std(specificity_list)),
+    "Accuracy": (np.mean(accuracy_list), np.std(accuracy_list)),
     "F1-Score": (np.mean(f1_list), np.std(f1_list)),
     "AUC": (np.mean(auc_list), np.std(auc_list))
 }
