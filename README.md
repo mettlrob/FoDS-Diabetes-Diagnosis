@@ -15,9 +15,9 @@ The target variable is `Outcome`: 0 = non-diabetic, 1 = diabetic.
 - ✅ Export results and plots
 
 ## 👥 Authors
-Robin Mettler
-Tobias Herrmann
-Georg Weber
-Michael Keller
+- Robin Mettler
+- Tobias Herrmann
+- Georg Weber
+- Michael Keller
 
 ##📋 Report
