@@ -7,6 +7,7 @@ from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix, classification_report, roc_auc_score, roc_curve
 import matplotlib.pyplot as plt
 import seaborn as sns
+import shap
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -66,6 +67,11 @@ tpr_list = []
 
 coef_list = [] #this is for feature importance.
 
+# shap lists
+shap_values_all = []
+shap_test_sets = []
+shap_models = []
+
 scoring = { 
     'f1' : make_scorer(f1_score, average = 'binary', pos_label = 1),
     'recall' : make_scorer(recall_score, pos_label = 1),
@@ -123,9 +129,17 @@ for train_idx, test_idx in outer_cv.split(X, y):
     """--- Evaluate best model on outer test set ---"""
 
     best_model = grid_search.best_estimator_
-
+    
     coef_list.append(best_model.coef_.flatten()) #for feature importance
 
+    
+    shap_test_sets.append(X_test.copy())
+    shap_models.append(best_model) #for shap analysis
+
+    
+    explainer = shap.LinearExplainer(best_model, X_train, feature_perturbation="interventional")
+    shap_values = explainer.shap_values(X_test)
+    shap_values_all.append(shap_values)
 
     y_pred = best_model.predict(X_test)
     y_pred_proba = best_model.predict_proba(X_test)[:, 1]
@@ -264,3 +278,73 @@ plt.close()
 """Linear SVM makes predictions using a weighted sum of the input features. The learned coefficients (wi) 
 directly represent the influence of each feature on the decision boundary. Larger absolute values mean 
 stronger influence; positive weights push toward the positive class (diabetes), negative toward teh negative class."""
+
+
+""" --- SHAP Barplot --- """
+shap_mean_values_all = []
+feature_names = X.columns
+for i, (model, X_test_fold) in enumerate(zip(shap_models, shap_test_sets)): 
+    explainer = shap.LinearExplainer(model, X_test_fold, feature_perturbation="interventional")
+    shap_values = explainer.shap_values(X_test_fold)
+
+    #shap_values shape: (n_samples. n_features)
+    mean_abs_shap = np.abs(shap_values).mean(axis = 0)
+    shap_mean_values_all.append(mean_abs_shap)
+
+
+#Average SHAP values across folds
+shap_values_array= np.array(shap_mean_values_all)
+avg_shap = shap_values_array.mean(axis = 0)
+
+#Summary of shap
+shap_df = pd.DataFrame({
+    'Feature' : feature_names,
+    'Mean_SHAP_value' : avg_shap,
+
+}).sort_values(by = 'Mean_SHAP_value', ascending = False)
+
+#plot SHAP feature importance using barplot
+plt.figure(figsize=(10, 6))
+sns.barplot(data = shap_df.head(10), x = 'Mean_SHAP_value', y = 'Feature', palette = 'inferno')
+plt.title('Mean SHAP Feature Importances (Linear SVM across Folds)')
+plt.xlabel('Mean SHAP Value')
+plt.ylabel('Feature')
+plt.tight_layout()
+plt.savefig('../../output/SVM_output/SVM_SHAP_feature_importance.png')
+plt.close()
+
+#plot SHAP summary plot
+all_shap_values = np.vstack(shap_values_all)
+all_X_test = pd.concat(shap_test_sets, axis = 0)
+
+all_X_test.columns = feature_names
+
+plt.figure(figsize=(10, 6))
+shap.summary_plot(all_shap_values, all_X_test, feature_names = feature_names, show = False)
+plt.tight_layout
+plt.savefig('../../output/SVM_output/SVM_SHAP_summary.png', dpi = 300)
+plt.close()
+
+
+""" --- Collecting and saving useful metrics --- """
+
+summary = {
+    'Model' : 'SVM',
+    'F1_Mean' : [np.mean(f1_list)],
+    'F1_Std' : [np.std(f1_list)],
+    'Recall_Mean' : [np.mean(recall_list)],
+    'Recall_Std' : [np.std(recall_list)],
+    'Precision_Mean' : [np.mean(precision_list)],
+    'Precision_Std' : [np.std(precision_list)],
+    'Accuracy_Mean' : [np.mean([report["accuracy"] for report in all_reports])],
+    'Accuracy_Std' : [np.std([report["accuracy"] for report in all_reports])],
+    'ROC_AUC_Mean' : [np.mean(roc_auc_list)],
+    'ROC_AUC_Std' : [np.std(roc_auc_list)],
+
+}
+df_summary = pd.DataFrame(summary)
+df_summary.to_csv('../../Data_Processing/svm_summary_metrics.csv', index = False)
+
+
+
+
