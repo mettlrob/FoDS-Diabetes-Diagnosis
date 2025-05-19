@@ -75,7 +75,8 @@ shap_models = []
 scoring = { 
     'f1' : make_scorer(f1_score, average = 'binary', pos_label = 1),
     'recall' : make_scorer(recall_score, pos_label = 1),
-    'precision' : make_scorer(precision_score, pos_label = 1)
+    'precision' : make_scorer(precision_score, pos_label = 1),
+    'roc_auc' : make_scorer(roc_auc_score, needs_proba = True)
 
 }
 """"Outer CV loop"""
@@ -95,7 +96,7 @@ for train_idx, test_idx in outer_cv.split(X, y):
         param_grid = param_grid,
         cv = inner_cv,
         scoring = scoring, #for overview and interpretation.
-        refit = 'f1', #choose the best model based on f1 score
+        refit = 'recall', #choose the best model based on recall score
         n_jobs = -1,
         return_train_score = True
     )
