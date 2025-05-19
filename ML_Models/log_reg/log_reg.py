@@ -1,7 +1,5 @@
 #%%
 
-# Logistisches Regressions Machine Learning Model Python File
-# 1 Data set as input: whole_cleaned_diabetes.csv
 
 
 
