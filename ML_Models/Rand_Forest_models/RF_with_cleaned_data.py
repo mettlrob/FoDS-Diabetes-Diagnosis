@@ -1,24 +1,31 @@
 # Importieren der notwendigen Bibliotheken
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold, cross_val_score # StratifiedKFold and cross_val_score hinzugefügt
+from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, roc_auc_score, roc_curve
+from sklearn.metrics import (classification_report, confusion_matrix, accuracy_score,
+                             roc_auc_score, roc_curve, f1_score, recall_score, precision_score)
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.tree import plot_tree
+import os # Für das Erstellen von Ordnern
+
 # --- Schritt 1: Daten laden ---
 print("Schritt 1: Daten laden...")
 try:
+    # Stelle sicher, dass der Pfad zu deiner Datei korrekt ist
     data = pd.read_csv('Data_Processing/no_transformer_data.csv')
     print("Daten erfolgreich geladen.")
-    # print(data.head()) # Optional: Zum Überprüfen der Spalten
 except FileNotFoundError:
-    print("Fehler: 'data/cleaned_diabetes.csv' wurde nicht gefunden. Bitte überprüfen Sie den Pfad und Dateinamen.") # Korrigierte Fehlermeldung
+    print("Fehler: 'Data_Processing/no_transformer_data.csv' wurde nicht gefunden. Bitte überprüfen Sie den Pfad und Dateinamen.")
+    exit()
+except Exception as e:
+    print(f"Ein Fehler beim Laden der Daten ist aufgetreten: {e}")
     exit()
 
 # --- Schritt 2: Features (X) und Zielvariable (y) definieren ---
 print("\nSchritt 2: Features (X) und Zielvariable (y) definieren...")
-target_column = 'Outcome' # Definieren Sie hier Ihren Zielspaltennamen
+target_column = 'Outcome'
 if target_column in data.columns:
     X = data.drop(target_column, axis=1)
     y = data[target_column]
@@ -29,132 +36,313 @@ else:
     exit()
 
 # --- Schritt 3: Daten aufteilen (Trainings- und finaler Testset) ---
-# Dieser Testset (X_test, y_test) wird NICHT in der Nested Cross-Validation verwendet,
-# sondern dient der finalen Bewertung des Modells, das auf dem gesamten X_train trainiert wurde.
 print("\nSchritt 3: Daten in Trainings- und finalen Testset aufteilen...")
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-print(f"Trainingsset Größe: {X_train.shape[0]}, Testset Größe: {X_test.shape[0]}")
+try:
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    print(f"Trainingsset Größe: {X_train.shape[0]}, Testset Größe: {X_test.shape[0]}")
+except Exception as e:
+    print(f"Fehler beim Aufteilen der Daten: {e}")
+    exit()
 
-# --- Schritt 4: Nested Cross-Validation zur robusten Leistungsbewertung ---
-print("\nSchritt 4: Nested Cross-Validation starten...")
 
-# Basis-Modell (wird innerhalb von GridSearchCV verwendet)
+# --- MODIFIZIERTER Schritt 4: Nested Cross-Validation mit ROC-Kurven-Sammlung ---
+print("\nSchritt 4: Nested Cross-Validation starten (manuelle Schleife für ROC-Daten)...")
+
 rf_base = RandomForestClassifier(random_state=42, class_weight='balanced')
-
-# Parametergitter für die innere Schleife (GridSearchCV)
 param_grid = {
-    'n_estimators': [100, 200], # Reduziert für schnelleres Beispiel, anpassen!
+    'n_estimators': [100, 200],
     'max_depth': [10, 20, None],
-    'min_samples_split': [2, 5], # Reduziert, anpassen!
-    'min_samples_leaf': [1, 3]   # Reduziert, anpassen!
+    'min_samples_split': [2, 5],
+    'min_samples_leaf': [1, 3]
 }
 
-# Innere Schleife: GridSearchCV für Hyperparameter-Tuning
-# verbose=1 oder 0 hier, da es sonst sehr viel Output in der äußeren Schleife gibt
 inner_cv_grid_search = GridSearchCV(estimator=rf_base, param_grid=param_grid,
-                                    cv=3, # Anzahl der Folds für die innere CV (Hyperparameter-Tuning) - Beispiel: 3
-                                    n_jobs=-1, scoring='f1', verbose=0) # verbose=0 um Output zu reduzieren
+                                    cv=3,
+                                    n_jobs=-1, scoring='roc_auc', verbose=0)
+outer_cv_folds = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-# Äußere Schleife: Cross-Validation zur Bewertung des GridSearchCV-Prozesses
-# Wir verwenden StratifiedKFold, da es sich um eine Klassifikationsaufgabe handelt und wir stratify=y in train_test_split verwendet haben.
-outer_cv_folds = StratifiedKFold(n_splits=5, shuffle=True, random_state=42) # Beispiel: 5 äußere Folds
+all_fprs = [] # NEU: Liste für die FPRs jedes Folds
+all_tprs_raw = [] # NEU: Liste für die rohen TPRs jedes Folds (nicht interpoliert)
+tprs_interp_list = [] # Umbenannt von tprs_list für Klarheit (interpolierte TPRs)
+aucs_list = []
+f1_scores_list = []
+recall_scores_list = []
+precision_scores_list = []
+accuracy_scores_list = []
+mean_fpr = np.linspace(0, 1, 100)
 
-# Führe die Nested Cross-Validation durch.
-# cross_val_score führt GridSearchCV (inner_cv_grid_search) für jeden Fold der äußeren CV aus.
-# X_train und y_train werden hier verwendet, um die Leistung auf dem Trainingsdatensatz robust zu schätzen.
-print(f"Nested CV wird auf X_train ({X_train.shape[0]} Samples) durchgeführt...")
-nested_scores = cross_val_score(inner_cv_grid_search, X=X_train, y=y_train, cv=outer_cv_folds, scoring='roc_auc', n_jobs=-1)
+main_output_folder = "output/RFC_output"
+# output_folder_path_cv = os.path.join(main_output_folder, "cv_metrics") # Nicht mehr zwingend nötig für CSVs
 
-print(f"\nNested ROC AUC Scores für jeden äußeren Fold: {nested_scores}")
-print(f"Durchschnittlicher Nested ROC AUC Score: {nested_scores.mean():.4f}")
-print(f"Standardabweichung des Nested ROC AUC Scores: {nested_scores.std():.4f}")
-print("Nested Cross-Validation abgeschlossen.")
+try:
+    if not os.path.exists(main_output_folder):
+        os.makedirs(main_output_folder)
+        print(f"Ordner erstellt: {main_output_folder}")
+    # if not os.path.exists(output_folder_path_cv): # Nicht mehr zwingend nötig für CV-CSVs
+    #     os.makedirs(output_folder_path_cv)
+    #     print(f"Ordner erstellt: {output_folder_path_cv}")
+except OSError as e:
+    print(f"Fehler beim Erstellen der Ordner: {e}")
+    exit()
+
+X_train_np = X_train.to_numpy() if isinstance(X_train, pd.DataFrame) else X_train
+y_train_np = y_train.to_numpy() if isinstance(y_train, pd.Series) else y_train
+
+print(f"Nested CV wird auf X_train ({X_train_np.shape[0]} Samples) durchgeführt...")
+for i, (train_idx, val_idx) in enumerate(outer_cv_folds.split(X_train_np, y_train_np)):
+    print(f"  Äußerer Fold {i+1}/{outer_cv_folds.get_n_splits()}...")
+    X_outer_train, X_outer_val = X_train_np[train_idx], X_train_np[val_idx]
+    y_outer_train, y_outer_val = y_train_np[train_idx], y_train_np[val_idx]
+
+    inner_cv_grid_search.fit(X_outer_train, y_outer_train)
+    best_model_fold = inner_cv_grid_search.best_estimator_
+    
+    y_pred_proba_fold = best_model_fold.predict_proba(X_outer_val)[:, 1]
+    y_pred_class_fold = best_model_fold.predict(X_outer_val)
+    
+    fpr_fold, tpr_fold, _ = roc_curve(y_outer_val, y_pred_proba_fold)
+    roc_auc_fold = roc_auc_score(y_outer_val, y_pred_proba_fold)
+
+    all_fprs.append(fpr_fold) # NEU: Speichere FPR dieses Folds
+    all_tprs_raw.append(tpr_fold) # NEU: Speichere TPR dieses Folds
+    aucs_list.append(roc_auc_fold)
+    
+    f1_fold = f1_score(y_outer_val, y_pred_class_fold, pos_label=1, zero_division=0)
+    f1_scores_list.append(f1_fold)
+    
+    recall_fold = recall_score(y_outer_val, y_pred_class_fold, pos_label=1, zero_division=0)
+    recall_scores_list.append(recall_fold)
+
+    precision_fold = precision_score(y_outer_val, y_pred_class_fold, pos_label=1, zero_division=0)
+    precision_scores_list.append(precision_fold)
+    
+    accuracy_fold = accuracy_score(y_outer_val, y_pred_class_fold)
+    accuracy_scores_list.append(accuracy_fold)
+    
+    tprs_interp_list.append(np.interp(mean_fpr, fpr_fold, tpr_fold))
+    tprs_interp_list[-1][0] = 0.0
+    print(f"    Fold {i+1} Metriken: AUC={roc_auc_fold:.4f}, F1={f1_fold:.4f}, Recall={recall_fold:.4f}, Precision={precision_fold:.4f}, Acc={accuracy_fold:.4f}")
+
+print("\nNested Cross-Validation (manuelle Schleife) abgeschlossen.")
+print(f"\nDurchschnittlicher Nested ROC AUC Score: {np.mean(aucs_list):.4f} (Std: {np.std(aucs_list):.4f})")
+print(f"Durchschnittlicher Nested F1 Score (pos_label=1): {np.mean(f1_scores_list):.4f} (Std: {np.std(f1_scores_list):.4f})")
+print(f"Durchschnittlicher Nested Recall Score (pos_label=1): {np.mean(recall_scores_list):.4f} (Std: {np.std(recall_scores_list):.4f})")
+print(f"Durchschnittlicher Nested Accuracy Score: {np.mean(accuracy_scores_list):.4f} (Std: {np.std(accuracy_scores_list):.4f})")
+
+
+# --- ANGEPASSTER Schritt 4.1: Speichern der CV-Metriken-Zusammenfassung im gewünschten Format ---
+print("\nSchritt 4.1: Speichern der Cross-Validation Metriken Zusammenfassung...")
+
+# Erstelle das Dictionary im gewünschten Format
+cv_summary_data = {
+    'Model': ['RandomForest_CV'], # Modellname für die CV-Ergebnisse
+    'F1_Mean': [np.mean(f1_scores_list)],
+    'F1_Std': [np.std(f1_scores_list)],
+    'Recall_Mean': [np.mean(recall_scores_list)],
+    'Recall_Std': [np.std(recall_scores_list)],
+    'Precision_Mean': [np.mean(precision_scores_list)], # NEU
+    'Precision_Std': [np.std(precision_scores_list)],   # NEU
+    'Accuracy_Mean': [np.mean(accuracy_scores_list)],
+    'Accuracy_Std': [np.std(accuracy_scores_list)],
+    'ROC_AUC_Mean': [np.mean(aucs_list)],
+    'ROC_AUC_Std': [np.std(aucs_list)]
+}
+
+cv_summary_df = pd.DataFrame(cv_summary_data)
+
+# Dateipfad für die Zusammenfassungs-CSV im Data_Processing Ordner
+# Der Dateiname im Screenshot deines Kollegen ist 'rfc_summary_metrics.csv'
+# Du könntest einen ähnlichen Namen wählen oder ihn anpassen
+summary_filename = "rfc_cv_summary_metrics.csv" # Angepasster Name für Klarheit (CV Summary)
+cv_summary_filepath = os.path.join("Data_Processing", summary_filename)
+
+cv_summary_df.to_csv(cv_summary_filepath, index=False)
+print(f"Zusammenfassung der CV-Metriken gespeichert in: {cv_summary_filepath}")
+
+# Die CSV-Datei mit den Metriken pro Fold wird nicht mehr erstellt, wie gewünscht.
+# Wenn du sie doch brauchst, kannst du den alten Code für cv_metrics_per_fold_df wieder aktivieren.
+
+
+# --- Schritt 4.5: Mittlere ROC-Kurve plotten und finalisieren ---
+# --- KORRIGIERTER Schritt 4.5: Plotten ALLER Fold-ROC-Kurven, Mittlere ROC-Kurve und Standardabweichung ---
+print("\nSchritt 4.5: Plotten der ROC-Kurven (alle Folds und Mittelwert)...")
+plt.figure(figsize=(10, 8))
+
+# Plotten jeder einzelnen ROC-Kurve pro Fold
+# all_fprs, all_tprs_raw und aucs_list wurden in Schritt 4 gefüllt
+for i in range(len(all_fprs)):
+    plt.plot(all_fprs[i], all_tprs_raw[i], lw=1, alpha=0.4, # Dünnere, halbtransparente Linien
+             label=f'ROC Fold {i+1} (AUC = {aucs_list[i]:.2f})' if i < 5 else None) # Legende nur für die ersten paar Folds, sonst unübersichtlich
+
+# Chance-Linie
+plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='grey', label='Chance', alpha=.8)
+"""
+# Mittlere TPR und AUC (berechnet mit interpolierten TPRs aus tprs_interp_list)
+mean_tpr = np.mean(tprs_interp_list, axis=0) # tprs_interp_list wurde in Schritt 4 korrekt gefüllt
+mean_tpr[-1] = 1.0
+mean_auc_val = np.mean(aucs_list)
+std_auc_val = np.std(aucs_list)
+plt.plot(mean_fpr, mean_tpr, color='blue', # mean_fpr wurde in Schritt 4 definiert
+         label=f'Mean ROC (AUC = {mean_auc_val:.2f} $\\pm$ {std_auc_val:.2f})',
+         lw=2.5, alpha=.9) # Dickere Linie für Mittelwert
+
+# Standardabweichungsband
+std_tpr = np.std(tprs_interp_list, axis=0)
+tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+plt.fill_between(mean_fpr, tprs_lower, tprs_upper, color='cornflowerblue', alpha=.3,
+                 label=r'$\pm$ 1 std. dev.')
+"""
+plt.xlim([-0.05, 1.05])
+plt.ylim([-0.05, 1.05])
+plt.xlabel('False Positive Rate (1 - Specificity)')
+plt.ylabel('True Positive Rate (Sensitivity)')
+plt.title('ROC Curves from Nested CV - Random Forest (on X_train)')
+plt.legend(loc="lower right", fontsize='small')
+plt.grid(alpha=0.3)
+nested_cv_roc_plot_path = os.path.join(main_output_folder, "nested_cv_roc_curves_with_folds_RFC.png")
+plt.savefig(nested_cv_roc_plot_path)
+print(f"Nested CV ROC Kurve (mit Folds) gespeichert in: {nested_cv_roc_plot_path}")
+
 
 # --- Schritt 5: Training des finalen Modells mit GridSearchCV auf dem gesamten Trainingsset ---
-# Nachdem wir eine robuste Schätzung der Leistung durch Nested CV erhalten haben,
-# trainieren wir nun das Modell mit den besten Hyperparametern auf dem *gesamten* X_train Datensatz,
-# um es anschließend auf dem X_test Datensatz zu bewerten.
 print("\nSchritt 5: Training des finalen Modells mit GridSearchCV auf dem gesamten X_train...")
-
-# Wir verwenden hier eine neue GridSearchCV-Instanz oder fitten die alte neu,
-# um die besten Parameter für das *gesamte* X_train zu finden.
-# verbose=2 hier, um den Prozess zu sehen. cv=5 wie im Originalcode.
 final_grid_search = GridSearchCV(estimator=rf_base, param_grid=param_grid,
-                                 cv=5, n_jobs=-1, scoring='roc_auc', verbose=2)
-
+                                 cv=5,
+                                 n_jobs=-1, scoring='roc_auc', verbose=1)
 final_grid_search.fit(X_train, y_train)
-
 print("\nBeste gefundene Parameter für das finale Modell (auf X_train):")
 print(final_grid_search.best_params_)
-
 best_rf_model = final_grid_search.best_estimator_
 print("\nBestes finales Modell wurde ausgewählt und auf X_train trainiert.")
 
+# --- Schritt 5.5: Visualisierung eines einzelnen Entscheidungsbaums (optional) ---
+if hasattr(best_rf_model, 'estimators_') and len(best_rf_model.estimators_) > 0:
+    print("\nSchritt 5.5: Visualisierung eines einzelnen Entscheidungsbaums...")
+    try:
+        single_tree = best_rf_model.estimators_[0]
+        plt.figure(figsize=(20,10))
+        plot_tree(single_tree,
+                  feature_names=X.columns.tolist(),
+                  class_names=[str(cls) for cls in best_rf_model.classes_],
+                  filled=True, rounded=True, impurity=True, proportion=False,
+                  fontsize=7, max_depth=3)
+        plt.title("Visualisierung eines einzelnen Entscheidungsbaums aus dem Random Forest (max_depth=3)")
+        tree_plot_path = os.path.join(main_output_folder, "single_decision_tree_from_rf.png")
+        plt.savefig(tree_plot_path)
+        print(f"Einzelner Entscheidungsbaum visualisiert und gespeichert in: {tree_plot_path}")
+        
+    except Exception as e:
+        print(f"Fehler bei der Visualisierung des Baumes: {e}")
+else:
+    print("\nSchritt 5.5: Konnte keinen einzelnen Baum visualisieren (Modell hat keine 'estimators_').")
+
+
 # --- Schritt 6: Vorhersagen mit dem finalen OPTIMIERTEN Modell auf X_test ---
 print("\nSchritt 6: Vorhersagen mit dem finalen optimierten Modell auf X_test treffen...")
-y_pred = best_rf_model.predict(X_test)
-y_pred_proba = best_rf_model.predict_proba(X_test)[:, 1]
-print("Vorhersagen abgeschlossen.")
+y_pred_final = best_rf_model.predict(X_test)
+y_pred_proba_final = best_rf_model.predict_proba(X_test)[:, 1]
+print("Vorhersagen auf X_test abgeschlossen.")
 
 # --- Schritt 7: Leistung des finalen OPTIMIERTEN Modells auf X_test bewerten ---
+# HIER WIRD DIE CSV FÜR DIE FINALEN METRIKEN ERSTELLT (WIE ZUVOR BESPROCHEN)
 print("\nSchritt 7: Leistung des finalen optimierten Modells auf X_test bewerten...")
-accuracy = accuracy_score(y_test, y_pred)
-print(f"Finale Genauigkeit (Accuracy) auf X_test: {accuracy:.4f}") # Angepasste Bezeichnung
-print("\nFinale Konfusionsmatrix auf X_test:") # Angepasste Bezeichnung
-print(confusion_matrix(y_test, y_pred))
-print("\nFinaler Klassifikationsbericht auf X_test:") # Angepasste Bezeichnung
-print(classification_report(y_test, y_pred))
-roc_auc_test = roc_auc_score(y_test, y_pred_proba) # Eigene Variable für Klarheit
-print(f"\nFinaler ROC AUC Score auf X_test: {roc_auc_test:.4f}") # Angepasste Bezeichnung
+accuracy_final = accuracy_score(y_test, y_pred_final) # y_pred_final aus Schritt 6
+roc_auc_final_test = roc_auc_score(y_test, y_pred_proba_final) # y_pred_proba_final aus Schritt 6
+print(f"Finale Genauigkeit (Accuracy) auf X_test: {accuracy_final:.4f}")
 
-cm = confusion_matrix(y_test, y_pred)
-print("\nPlotting der Konfusionsmatrix auf X_test...")
+print("\nFinale Konfusionsmatrix auf X_test:")
+cm_final = confusion_matrix(y_test, y_pred_final)
+print(cm_final)
+
+print("\nFinaler Klassifikationsbericht auf X_test:")
+report_final_dict = classification_report(y_test, y_pred_final, zero_division=0, output_dict=True)
+print(classification_report(y_test, y_pred_final, zero_division=0))
+print(f"\nFinaler ROC AUC Score auf X_test: {roc_auc_final_test:.4f}")
+
+# --- Speichern der finalen Test-Metriken in einer CSV-Datei (im Data_Processing Ordner) ---
+print("\nSpeichern der finalen Test-Metriken in CSV im Ordner Data_Processing...")
+final_test_metrics_summary_data = {
+    'Model': ['RandomForest_FinalTest'], # Unterscheidungsmerkmal
+    'F1_Mean_Class1': [report_final_dict['1']['f1-score']], # F1-Score für Klasse 1
+    'F1_Std_Class1': [0], # Keine Std für einen einzelnen Testlauf
+    'Recall_Mean_Class1': [report_final_dict['1']['recall']], # Recall für Klasse 1
+    'Recall_Std_Class1': [0],
+    'Precision_Mean_Class1': [report_final_dict['1']['precision']], # Precision für Klasse 1
+    'Precision_Std_Class1': [0],
+    'Accuracy_Mean': [accuracy_final],
+    'Accuracy_Std': [0],
+    'ROC_AUC_Mean': [roc_auc_final_test],
+    'ROC_AUC_Std': [0]
+}
+final_test_summary_df = pd.DataFrame(final_test_metrics_summary_data)
+
+# Dateipfad für die finale Test-Metriken-CSV im Data_Processing Ordner
+final_test_summary_filename = "rfc_final_test_summary_metrics.csv"
+final_test_summary_filepath = os.path.join("Data_Processing", final_test_summary_filename)
+
+final_test_summary_df.to_csv(final_test_summary_filepath, index=False)
+print(f"Zusammenfassung der finalen Test-Metriken gespeichert in: {final_test_summary_filepath}")
+# --- Ende Speichern der finalen Test-Metriken ---
+
+# Plotten der finalen Konfusionsmatrix (normalisiert zeilenweise)
+print("\nPlotting der normalisierten Konfusionsmatrix (Zeilen = 100%) für X_test...")
 plt.figure(figsize=(8, 6))
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False,
+cm_final_normalized_row = confusion_matrix(y_test, y_pred_final, normalize='true') # Normalisierung hier
+sns.heatmap(cm_final_normalized_row, annot=True, fmt=".2%", cmap="Blues", cbar=True, # Formatierung als Prozent
             xticklabels=best_rf_model.classes_, yticklabels=best_rf_model.classes_)
 plt.xlabel("Predicted Label")
 plt.ylabel("True Label")
-plt.title("Konfusionsmatrix - Finales Modell auf X_test")
-plt.savefig("output/RFC_output/confusion_matrix.png") 
-plt.show()
+plt.title("Random Forest Konfusionsmatrix (in Prozent)") # Aktueller Titel
+cm_plot_path = os.path.join(main_output_folder, "RFC_confusion_matrix_Prozent.png")
+plt.savefig(cm_plot_path)
+print(f"Finale Konfusionsmatrix gespeichert in: {cm_plot_path}")
 
 
 # --- Schritt 8: Merkmalswichtigkeit des finalen OPTIMIERTEN Modells ---
 print("\nSchritt 8: Merkmalswichtigkeit des finalen Modells analysieren...")
-importances = best_rf_model.feature_importances_
-# X.columns ist hier in Ordnung, da X_train die gleichen Spalten wie X hat
-features = X.columns
-feature_importance_df = pd.DataFrame({'Feature': features, 'Importance': importances})
-feature_importance_df = feature_importance_df.sort_values(by='Importance', ascending=False)
-print("\nWichtigkeit der Merkmale (finales optimiertes Modell):")
-print(feature_importance_df)
+if hasattr(best_rf_model, 'feature_importances_'):
+    importances = best_rf_model.feature_importances_
+    features = X.columns
+    feature_importance_df = pd.DataFrame({'Feature': features, 'Importance': importances})
+    feature_importance_df = feature_importance_df.sort_values(by='Importance', ascending=False)
+    print("\nWichtigkeit der Merkmale (finales optimiertes Modell):")
+    print(feature_importance_df.to_string())
+
+    print("\nPlotting der Merkmalswichtigkeit...")
+    plt.figure(figsize=(10, max(6, len(features)*0.5)))
+    sns.barplot(x='Importance', y='Feature', data=feature_importance_df, palette='Blues_r')
+    plt.title('Feature Importance Random Forest')
+    plt.xlabel('Wichtigkeit (Importance)')
+    plt.ylabel('Merkmal (Feature)')
+    plt.tight_layout()
+    fi_plot_path = os.path.join(main_output_folder, "feature_importance_plot_RFC.png")
+    plt.savefig(fi_plot_path)
+    print(f"Merkmalswichtigkeits-Plot gespeichert in: {fi_plot_path}")
+    
+else:
+    print("Konnte Merkmalswichtigkeit nicht bestimmen (Modell hat kein 'feature_importances_').")
 
 
-print("\nPlotting der Merkmalswichtigkeit...")
-plt.figure(figsize=(10, 8)) # Eventuell Größe anpassen, je nach Anzahl Features
-sns.barplot(x='Importance', y='Feature', data=feature_importance_df, color='blue')
-plt.title('Merkmalswichtigkeit - Finales Random Forest Modell')
-plt.xlabel('Wichtigkeit (Importance)')
-plt.ylabel('Merkmal (Feature)')
-plt.tight_layout() # Passt den Plot an, um Überlappungen zu vermeiden
-plt.savefig("output/RFC_output/feature_importance_plot.png")
-plt.show()
 
 
 
 # --- Schritt 9: ROC-Kurve des finalen OPTIMIERTEN Modells auf X_test plotten ---
 print("\nSchritt 9: ROC-Kurve des finalen Modells auf X_test plotten...")
-fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
+fpr_final_test, tpr_final_test, _ = roc_curve(y_test, y_pred_proba_final)
 plt.figure(figsize=(8, 6))
-plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'Finale ROC curve auf X_test (area = {roc_auc_test:.2f})')
+plt.plot(fpr_final_test, tpr_final_test, color='darkorange', lw=2, label=f'Finale ROC curve auf X_test (AUC = {roc_auc_final_test:.2f})')
 plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
 plt.xlim([0.0, 1.0])
 plt.ylim([0.0, 1.05])
 plt.xlabel('False Positive Rate (1 - Specificity)')
-plt.ylabel('True Positive Rate (Sensitivity)')
+plt.ylabel('True Positive Rate (Sentessitivity)')
 plt.title('Finale ROC Curve - Random Forest (auf X_test)')
 plt.legend(loc="lower right")
-# plt.show() # Kommentar entfernen, um den Plot anzuzeigen
-print("Plot-Code ausgeführt. Entfernen Sie ggf. das Kommentarzeichen vor 'plt.show()', um den Plot anzuzeigen.")
-plt.savefig("output/RFC_output/roc_curve.png")
+plt.grid(alpha=0.3)
+final_roc_plot_path = os.path.join(main_output_folder, "roc_curve_final_model_RFC.png")
+plt.savefig(final_roc_plot_path)
+print(f"Finale ROC-Kurve gespeichert in: {final_roc_plot_path}")
 plt.show()
+
+print("\nSkript vollständig ausgeführt.")
