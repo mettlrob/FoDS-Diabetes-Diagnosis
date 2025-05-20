@@ -165,52 +165,50 @@ print(f"Zusammenfassung der CV-Metriken gespeichert in: {cv_summary_filepath}")
 
 
 # --- Schritt 4.5: Mittlere ROC-Kurve plotten und finalisieren ---
-# --- KORRIGIERTER Schritt 4.5: Plotten ALLER Fold-ROC-Kurven, Mittlere ROC-Kurve und Standardabweichung ---
+# --- ANGEPASST, um dem gewünschten Layout zu entsprechen ---
 print("\nSchritt 4.5: Plotten der ROC-Kurven (alle Folds und Mittelwert)...")
-plt.figure(figsize=(10, 8))
+plt.figure(figsize=(10, 8)) # You can adjust figsize if needed, e.g., (8,6) like your example
 
 # Plotten jeder einzelnen ROC-Kurve pro Fold
 # all_fprs, all_tprs_raw und aucs_list wurden in Schritt 4 gefüllt
 for i in range(len(all_fprs)):
-    plt.plot(all_fprs[i], all_tprs_raw[i], lw=1, alpha=0.4, # Dünnere, halbtransparente Linien
-             label=f'ROC Fold {i+1} (AUC = {aucs_list[i]:.2f})' if i < 5 else None) # Legende nur für die ersten paar Folds, sonst unübersichtlich
+    plt.plot(all_fprs[i], all_tprs_raw[i], lw=1, alpha=0.3, # Dünnere, transparentere Linien für einzelne Folds
+             label=f'ROC Fold {i+1} (AUC = {aucs_list[i]:.2f})' if i < 2 else None) # Optional: Legende nur für die ersten paar Folds
 
-# Chance-Linie
-plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='grey', label='Chance', alpha=.8)
-"""
-# Mittlere TPR und AUC (berechnet mit interpolierten TPRs aus tprs_interp_list)
-mean_tpr = np.mean(tprs_interp_list, axis=0) # tprs_interp_list wurde in Schritt 4 korrekt gefüllt
-mean_tpr[-1] = 1.0
-mean_auc_val = np.mean(aucs_list)
-std_auc_val = np.std(aucs_list)
-plt.plot(mean_fpr, mean_tpr, color='blue', # mean_fpr wurde in Schritt 4 definiert
-         label=f'Mean ROC (AUC = {mean_auc_val:.2f} $\\pm$ {std_auc_val:.2f})',
-         lw=2.5, alpha=.9) # Dickere Linie für Mittelwert
 
-# Standardabweichungsband
-std_tpr = np.std(tprs_interp_list, axis=0)
-tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
-tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
-plt.fill_between(mean_fpr, tprs_lower, tprs_upper, color='cornflowerblue', alpha=.3,
-                 label=r'$\pm$ 1 std. dev.')
-"""
+# --- ANWENDUNG DES GEWÜNSCHTEN LAYOUTS ---
+
+# Zufallsklassifikator-Linie (wie in Ihrem Beispiel)
+plt.plot([0, 1], [0, 1], linestyle='--', color='red', label='Random Classifier') # 'Random Classifier' statt 'Chance'
+
+# Achsenbeschriftungen (wie in Ihrem Beispiel)
+plt.xlabel('False Positive Rate', fontsize=12) # Optional: fontsize anpassen
+plt.ylabel('True Positive Rate', fontsize=12) # Optional: fontsize anpassen
+
+# Titel (angepasst für Ihren Kontext, aber mit Schriftgröße aus dem Beispiel)
+plt.title('ROC Curve — Random Forest (5-fold CV)', fontsize=14) # Modellname angepasst
+
+# Legende (Position und Schriftgröße wie in Ihrem Beispiel)
+plt.legend(loc='lower right', fontsize=10)
+
+# Grid (wie in Ihrem Beispiel)
+plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.7)
+
+# Achsenlimits (optional, aber oft gut für saubere Darstellung)
 plt.xlim([-0.05, 1.05])
 plt.ylim([-0.05, 1.05])
-plt.xlabel('False Positive Rate (1 - Specificity)')
-plt.ylabel('True Positive Rate (Sensitivity)')
-plt.title('ROC Curves from Nested CV - Random Forest (on X_train)')
-plt.legend(loc="lower right", fontsize='small')
-plt.grid(alpha=0.3)
-nested_cv_roc_plot_path = os.path.join(main_output_folder, "nested_cv_roc_curves_with_folds_RFC.png")
-plt.savefig(nested_cv_roc_plot_path)
-print(f"Nested CV ROC Kurve (mit Folds) gespeichert in: {nested_cv_roc_plot_path}")
+
+# Layout optimieren (wie in Ihrem Beispiel)
+plt.tight_layout()
+plt.show()  # FLUSH the figure
+plt.savefig("output/RFC_output/RFC_ROC_curve.Folds.png")
 
 
 # --- Schritt 5: Training des finalen Modells mit GridSearchCV auf dem gesamten Trainingsset ---
 print("\nSchritt 5: Training des finalen Modells mit GridSearchCV auf dem gesamten X_train...")
 final_grid_search = GridSearchCV(estimator=rf_base, param_grid=param_grid,
                                  cv=5,
-                                 n_jobs=-1, scoring='roc_auc', verbose=1)
+                                 n_jobs=-1, scoring='recall', verbose=1)
 final_grid_search.fit(X_train, y_train)
 print("\nBeste gefundene Parameter für das finale Modell (auf X_train):")
 print(final_grid_search.best_params_)
@@ -287,17 +285,35 @@ print(f"Zusammenfassung der finalen Test-Metriken gespeichert in: {final_test_su
 # --- Ende Speichern der finalen Test-Metriken ---
 
 # Plotten der finalen Konfusionsmatrix (normalisiert zeilenweise)
-print("\nPlotting der normalisierten Konfusionsmatrix (Zeilen = 100%) für X_test...")
+
+print("\nPlotting der normalisierten Konfusionsmatrix (Werte als ganze Prozentzahlen) für X_test...")
 plt.figure(figsize=(8, 6))
-cm_final_normalized_row = confusion_matrix(y_test, y_pred_final, normalize='true') # Normalisierung hier
-sns.heatmap(cm_final_normalized_row, annot=True, fmt=".2%", cmap="Blues", cbar=True, # Formatierung als Prozent
-            xticklabels=best_rf_model.classes_, yticklabels=best_rf_model.classes_)
+
+# 1. Normalisierte Konfusionsmatrix berechnen (Werte sind Anteile, z.B. 0.7623)
+cm_final_normalized_row = confusion_matrix(y_test, y_pred_final, normalize='true')
+
+# 2. Werte für Annotationen vorbereiten: Anteile * 100 (z.B. 0.7623 -> 76.23)
+# Diese werden dann durch 'fmt' auf ganze Zahlen gerundet.
+cm_annot_values = cm_final_normalized_row * 100
+
+sns.heatmap(cm_final_normalized_row,  # Farben basieren auf Anteilen (0-1)
+            annot=cm_annot_values,    # Zahlen in den Zellen sind Prozentwerte (0-100)
+            fmt=".2f",                # Format als ganze Zahl (gerundet)
+            cmap="Blues",
+            cbar=True,                # Colorbar zeigt weiterhin Skala 0-1 für die Farben
+            xticklabels=["No Diabetes ", "Diabetes "],
+            yticklabels=["No Diabetes ", "Diabetes "])
+
 plt.xlabel("Predicted Label")
 plt.ylabel("True Label")
-plt.title("Random Forest Konfusionsmatrix (in Prozent)") # Aktueller Titel
-cm_plot_path = os.path.join(main_output_folder, "RFC_confusion_matrix_Prozent.png")
+# Der Titel verdeutlicht, dass die Zahlen in den Zellen Prozentwerte sind.
+plt.title("Random Forest Confusionmatrix (%)")
+
+# Dateinamen anpassen, um den Inhalt widerzuspiegeln
+cm_plot_path = os.path.join(main_output_folder, "RFC_confusion_matrix_Percentage.png")
 plt.savefig(cm_plot_path)
 print(f"Finale Konfusionsmatrix gespeichert in: {cm_plot_path}")
+plt.show() # Um den Plot direkt anzuzeigen
 
 
 # --- Schritt 8: Merkmalswichtigkeit des finalen OPTIMIERTEN Modells ---
@@ -325,9 +341,6 @@ else:
     print("Konnte Merkmalswichtigkeit nicht bestimmen (Modell hat kein 'feature_importances_').")
 
 
-
-
-
 # --- Schritt 9: ROC-Kurve des finalen OPTIMIERTEN Modells auf X_test plotten ---
 print("\nSchritt 9: ROC-Kurve des finalen Modells auf X_test plotten...")
 fpr_final_test, tpr_final_test, _ = roc_curve(y_test, y_pred_proba_final)
@@ -344,6 +357,7 @@ plt.grid(alpha=0.3)
 final_roc_plot_path = os.path.join(main_output_folder, "roc_curve_final_model_RFC.png")
 plt.savefig(final_roc_plot_path)
 print(f"Finale ROC-Kurve gespeichert in: {final_roc_plot_path}")
+
 
 
 
