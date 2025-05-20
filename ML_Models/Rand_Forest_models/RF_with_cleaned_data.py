@@ -167,13 +167,14 @@ print(f"Zusammenfassung der CV-Metriken gespeichert in: {cv_summary_filepath}")
 # --- Schritt 4.5: Mittlere ROC-Kurve plotten und finalisieren ---
 # --- ANGEPASST, um dem gewünschten Layout zu entsprechen ---
 print("\nSchritt 4.5: Plotten der ROC-Kurven (alle Folds und Mittelwert)...")
+plt.style.use('seaborn-v0_8-darkgrid')
 plt.figure(figsize=(10, 8)) # You can adjust figsize if needed, e.g., (8,6) like your example
 
 # Plotten jeder einzelnen ROC-Kurve pro Fold
 # all_fprs, all_tprs_raw und aucs_list wurden in Schritt 4 gefüllt
 for i in range(len(all_fprs)):
-    plt.plot(all_fprs[i], all_tprs_raw[i], lw=1, alpha=0.3, # Dünnere, transparentere Linien für einzelne Folds
-             label=f'ROC Fold {i+1} (AUC = {aucs_list[i]:.2f})' if i < 2 else None) # Optional: Legende nur für die ersten paar Folds
+    plt.plot(all_fprs[i], all_tprs_raw[i], 
+             label=f'ROC Fold {i+1} (AUC = {aucs_list[i]:.2f})') # Optional: Legende nur für die ersten paar Folds
 
 
 # --- ANWENDUNG DES GEWÜNSCHTEN LAYOUTS ---
@@ -182,8 +183,8 @@ for i in range(len(all_fprs)):
 plt.plot([0, 1], [0, 1], linestyle='--', color='red', label='Random Classifier') # 'Random Classifier' statt 'Chance'
 
 # Achsenbeschriftungen (wie in Ihrem Beispiel)
-plt.xlabel('False Positive Rate', fontsize=12) # Optional: fontsize anpassen
-plt.ylabel('True Positive Rate', fontsize=12) # Optional: fontsize anpassen
+plt.xlabel('False Positive Rate') # Optional: fontsize anpassen
+plt.ylabel('True Positive Rate') # Optional: fontsize anpassen
 
 # Titel (angepasst für Ihren Kontext, aber mit Schriftgröße aus dem Beispiel)
 plt.title('ROC Curve — Random Forest (5-fold CV)', fontsize=14) # Modellname angepasst
@@ -194,14 +195,11 @@ plt.legend(loc='lower right', fontsize=10)
 # Grid (wie in Ihrem Beispiel)
 plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.7)
 
-# Achsenlimits (optional, aber oft gut für saubere Darstellung)
-plt.xlim([-0.05, 1.05])
-plt.ylim([-0.05, 1.05])
-
 # Layout optimieren (wie in Ihrem Beispiel)
 plt.tight_layout()
-plt.show()  # FLUSH the figure
+  # FLUSH the figure
 plt.savefig("output/RFC_output/RFC_ROC_curve.Folds.png")
+plt.show() # Zeige den Plot an
 
 
 # --- Schritt 5: Training des finalen Modells mit GridSearchCV auf dem gesamten Trainingsset ---
@@ -298,7 +296,7 @@ cm_annot_values = cm_final_normalized_row * 100
 
 sns.heatmap(cm_final_normalized_row,  # Farben basieren auf Anteilen (0-1)
             annot=cm_annot_values,    # Zahlen in den Zellen sind Prozentwerte (0-100)
-            fmt=".2f",                # Format als ganze Zahl (gerundet)
+            fmt=".1f",                # Format als ganze Zahl (gerundet)
             cmap="Blues",
             cbar=True,                # Colorbar zeigt weiterhin Skala 0-1 für die Farben
             xticklabels=["No Diabetes ", "Diabetes "],
@@ -340,129 +338,6 @@ if hasattr(best_rf_model, 'feature_importances_'):
 else:
     print("Konnte Merkmalswichtigkeit nicht bestimmen (Modell hat kein 'feature_importances_').")
 
-
-# --- Schritt 9: ROC-Kurve des finalen OPTIMIERTEN Modells auf X_test plotten ---
-print("\nSchritt 9: ROC-Kurve des finalen Modells auf X_test plotten...")
-fpr_final_test, tpr_final_test, _ = roc_curve(y_test, y_pred_proba_final)
-plt.figure(figsize=(8, 6))
-plt.plot(fpr_final_test, tpr_final_test, color='darkorange', lw=2, label=f'Finale ROC curve auf X_test (AUC = {roc_auc_final_test:.2f})')
-plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-plt.xlim([0.0, 1.0])
-plt.ylim([0.0, 1.05])
-plt.xlabel('False Positive Rate (1 - Specificity)')
-plt.ylabel('True Positive Rate (Sentessitivity)')
-plt.title('Finale ROC Curve - Random Forest (auf X_test)')
-plt.legend(loc="lower right")
-plt.grid(alpha=0.3)
-final_roc_plot_path = os.path.join(main_output_folder, "roc_curve_final_model_RFC.png")
-plt.savefig(final_roc_plot_path)
-print(f"Finale ROC-Kurve gespeichert in: {final_roc_plot_path}")
-
-
-
-
-# --- NEU: Schritt 10: SHAP Analyse - Beeswarm Plot ---
-print("\nSchritt 10: SHAP Analyse - Beeswarm Plot für das finale Modell auf X_test...")
-# Stelle sicher, dass shap importiert ist, falls nicht schon ganz oben im Skript:
-# import shap # Ist bei dir schon oben, also gut.
-# import pandas as pd # Ist bei dir schon oben, also gut.
-
-print(f"SHAP Version: {shap.__version__}") # SHAP Version wird hier ausgegeben
-try:
-    explainer = shap.TreeExplainer(best_rf_model)
-    shap_values_raw = explainer.shap_values(X_test) # X_test sollte hier noch das DataFrame sein
-
-    print(f"Form von X_test: {X_test.shape}")
-    print(f"Typ von shap_values_raw: {type(shap_values_raw)}")
-    if isinstance(shap_values_raw, list):
-        print(f"Länge von shap_values_raw (Liste): {len(shap_values_raw)}")
-        if len(shap_values_raw) > 0: print(f"Form des ersten Elements (Klasse 0): {shap_values_raw[0].shape}")
-        if len(shap_values_raw) > 1: print(f"Form des zweiten Elements (Klasse 1): {shap_values_raw[1].shape}")
-    elif isinstance(shap_values_raw, np.ndarray):
-        print(f"Form von shap_values_raw (NumPy Array): {shap_values_raw.shape}")
-
-    shap_values_for_positive_class = None
-    if isinstance(shap_values_raw, list) and len(shap_values_raw) == len(best_rf_model.classes_):
-        positive_class_index = 1
-        try:
-            positive_class_label = 1
-            idx = list(best_rf_model.classes_).index(positive_class_label)
-            positive_class_index = idx
-        except ValueError:
-            print(f"Warnung: Positive Klasse Label '{positive_class_label}' nicht in model.classes_ {best_rf_model.classes_} gefunden. Verwende Index 1.")
-        shap_values_for_positive_class = shap_values_raw[positive_class_index]
-        print(f"SHAP-Werte aus Liste für Klasse '{best_rf_model.classes_[positive_class_index]}' (Index {positive_class_index} der Liste) ausgewählt.")
-    elif isinstance(shap_values_raw, np.ndarray) and shap_values_raw.ndim == 3 and shap_values_raw.shape == (X_test.shape[0], X_test.shape[1], len(best_rf_model.classes_)):
-        positive_class_index_in_array = 1
-        try:
-            positive_class_label = 1
-            idx = list(best_rf_model.classes_).index(positive_class_label)
-            positive_class_index_in_array = idx
-        except ValueError:
-            print(f"Warnung: Positive Klasse Label '{positive_class_label}' nicht in model.classes_ {best_rf_model.classes_} gefunden. Verwende Index 1 in der 3. Dimension des Arrays.")
-        shap_values_for_positive_class = shap_values_raw[:, :, positive_class_index_in_array]
-        print(f"SHAP-Werte aus 3D-Array für Klasse '{best_rf_model.classes_[positive_class_index_in_array]}' (Index {positive_class_index_in_array} der 3. Dimension) ausgewählt.")
-    elif isinstance(shap_values_raw, np.ndarray) and shap_values_raw.ndim == 2 and shap_values_raw.shape == X_test.shape:
-        shap_values_for_positive_class = shap_values_raw
-        print("SHAP-Werte wurden als 2D-Array erhalten. Wird direkt verwendet.")
-    else:
-        raise ValueError(f"Unerwartetes Format der SHAP-Werte. Typ: {type(shap_values_raw)}")
-
-    if shap_values_for_positive_class is None or shap_values_for_positive_class.shape != X_test.shape:
-        raise ValueError(f"Fehler bei der Auswahl der SHAP-Werte für die positive Klasse. Erhaltene Form: {shap_values_for_positive_class.shape if shap_values_for_positive_class is not None else 'None'}, Erwartete Form: {X_test.shape}")
-
-    # --- DIAGNOSE-PRINTS HIER EINGEFÜGT ---
-    print("\n--- Diagnose vor SHAP Plot ---")
-    print("X_test (Typ):", type(X_test))
-    if isinstance(X_test, pd.DataFrame):
-        print("X_test (Kopf):")
-        print(X_test.head())
-        print("\nX_test (Beschreibende Statistik):")
-        print(X_test.describe())
-    else: # Falls X_test wider Erwarten kein DataFrame ist
-        print("X_test ist kein Pandas DataFrame, gebe erste 5 Zeilen als Array aus:")
-        print(X_test[:5])
-
-    print("\nshap_values_for_positive_class (Typ):", type(shap_values_for_positive_class))
-    print("shap_values_for_positive_class (Form):", shap_values_for_positive_class.shape)
-    # Erstelle ein DataFrame für einfachere Anzeige und .describe()
-    shap_df = pd.DataFrame(shap_values_for_positive_class, columns=X_test.columns if isinstance(X_test, pd.DataFrame) else [f'feature_{i}' for i in range(shap_values_for_positive_class.shape[1])])
-    print("\nshap_values_for_positive_class (als DataFrame, Kopf):")
-    print(shap_df.head())
-    print("\nshap_values_for_positive_class (als DataFrame, Beschreibende Statistik):")
-    print(shap_df.describe())
-    print("--- Ende Diagnose --- \n")
-    # --- ENDE DIAGNOSE-PRINTS ---
-
-    # 3. Erstelle den Beeswarm Plot
-    plt.figure(figsize=(12, max(10, len(X_test.columns) * 0.75)))
-
-    shap.summary_plot(
-        shap_values_for_positive_class,
-        X_test, # SHAP erwartet hier oft das DataFrame für Feature-Namen und Originalwerte
-        plot_type="beeswarm", # TEST: Ändere dies zu "bar"
-        show=False
-    )
-    #plt.xlim([-0.4, 0.4]) # Experimentiere mit diesen Werten, z.B. auch [-0.3, 0.3] oder [-0.5, 0.5]
-    plt.title("SHAP Beeswarm Plot - Feature Impact on Model Output (Test Set)", fontsize=14)
-    
-    # TEST: Kommentiere plt.tight_layout() aus
-    plt.tight_layout() 
-
-    # 4. Speichere den Plot
-    shap_beeswarm_plot_path = os.path.join(main_output_folder, "T_shap_beeswarm_plot_RFC.png")
-    # TEST: Kommentiere bbox_inches='tight' aus und verwende die Zeile darunter
-    # plt.savefig(shap_beeswarm_plot_path, bbox_inches='tight') 
-    plt.savefig(shap_beeswarm_plot_path, bbox_inches='tight')  # Speichern ohne bbox_inches für den Test
-    print(f"SHAP Beeswarm Plot gespeichert in: {shap_beeswarm_plot_path}")
-    plt.close() 
-
-except ImportError:
-    print("SHAP-Bibliothek nicht installiert...")
-except Exception as e:
-    print(f"Ein Fehler ist bei der SHAP-Analyse aufgetreten: {e}")
-    import traceback
-    traceback.print_exc()
 
 
 print("\nSkript vollständig ausgeführt.")
