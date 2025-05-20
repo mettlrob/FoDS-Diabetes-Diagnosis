@@ -1,2 +1,0 @@
-Model,F1_Mean_Class1,F1_Std_Class1,Recall_Mean_Class1,Recall_Std_Class1,Precision_Mean_Class1,Precision_Std_Class1,Accuracy_Mean,Accuracy_Std,ROC_AUC_Mean,ROC_AUC_Std
-RandomForest_FinalTest,0.631578947368421,0,0.6666666666666666,0,0.6,0,0.7272727272727273,0,0.8192592592592592,0
