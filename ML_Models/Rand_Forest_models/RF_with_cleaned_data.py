@@ -59,7 +59,7 @@ param_grid = {
 innercv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 inner_cv_grid_search = GridSearchCV(estimator=rf_base, param_grid=param_grid,
                                     cv= innercv,
-                                    n_jobs=-1, scoring='roc_auc', verbose=0)
+                                    n_jobs=-1, scoring='recall', verbose=0)
 outer_cv_folds = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 all_fprs = [] # NEU: Liste für die FPRs jedes Folds
@@ -305,7 +305,7 @@ sns.heatmap(cm_final_normalized_row,  # Farben basieren auf Anteilen (0-1)
 plt.xlabel("Predicted Label")
 plt.ylabel("True Label")
 # Der Titel verdeutlicht, dass die Zahlen in den Zellen Prozentwerte sind.
-plt.title("Random Forest Confusionmatrix (%)")
+plt.title("Mean Confusionmatrix (%; RFC)")
 
 # Dateinamen anpassen, um den Inhalt widerzuspiegeln
 cm_plot_path = os.path.join(main_output_folder, "RFC_confusion_matrix_Percentage.png")
