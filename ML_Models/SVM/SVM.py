@@ -75,7 +75,8 @@ shap_models = []
 scoring = { 
     'f1' : make_scorer(f1_score, average = 'binary', pos_label = 1),
     'recall' : make_scorer(recall_score, pos_label = 1),
-    'precision' : make_scorer(precision_score, pos_label = 1)
+    'precision' : make_scorer(precision_score, pos_label = 1),
+    'roc_auc' : make_scorer(roc_auc_score, needs_proba = True)
 
 }
 """"Outer CV loop"""
@@ -95,7 +96,7 @@ for train_idx, test_idx in outer_cv.split(X, y):
         param_grid = param_grid,
         cv = inner_cv,
         scoring = scoring, #for overview and interpretation.
-        refit = 'f1', #choose the best model based on f1 score
+        refit = 'recall', #choose the best model based on recall score
         n_jobs = -1,
         return_train_score = True
     )
@@ -160,6 +161,11 @@ for train_idx, test_idx in outer_cv.split(X, y):
 
     """"--- Plot ROC curve ---"""
     fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
+
+    if fpr[-1] < 1.0 or tpr[-1] < 1.0:
+        fpr = np.append(fpr, 1.0)
+        tpr = np.append(tpr, 1.0)
+    # Add the identity line
     fpr_list.append(fpr) #to collect all fpr values for plotting in one figure below.
     tpr_list.append(tpr) # to collect all tpr values for plotting in one figure below.
     plt.figure()
@@ -171,7 +177,7 @@ for train_idx, test_idx in outer_cv.split(X, y):
     plt.legend()
     roc_path = f'../../output/SVM_output/ROC/ROC_Fold_{outer_fold}.png'
 
-    plt.savefig(roc_path)
+    plt.savefig(roc_path, dpi = 300)
     plt.close()
 
     #outer_fold += 1
@@ -207,6 +213,7 @@ for train_idx, test_idx in outer_cv.split(X, y):
     outer_fold += 1 
     
 #plot ROC curves for all outer folds in one figure.
+plt.style.use('seaborn-v0_8-darkgrid')
 plt.figure(figsize=(8, 6))
 ax = plt.gca()
 for i in range(len(fpr_list)):
@@ -216,27 +223,27 @@ add_identity(ax, color = 'r', ls = '--', label = 'Random Classifier')
 
 ax.set_xlabel('False Positive Rate')
 ax.set_ylabel('True Positive Rate')
-ax.set_title('ROC Curves for SVM Model Across Outer Folds')
-ax.legend(loc = 'lower right')
+ax.set_title('ROC Curve - SVM (5-fold CV)', fontsize = 14)
+ax.legend(loc = 'lower right', fontsize = 10)
 ax.set_xlim([0, 1])
 ax.set_ylim([0, 1])
-ax.grid(True, linestyle='--', alpha=0.5)
+ax.grid(True, linestyle='--', alpha=0.7)
 
 plt.tight_layout()
-plt.savefig('../../output/SVM_output/All_ROC_SVM.png')
+plt.savefig('../../output/SVM_output/All_ROC_SVM.png', dpi = 300)
 plt.close()
 
 #plot mean Coonfusion matrix across all outer folds
 mean_cm = np.mean(all_conf_matrices, axis = 0)
 mean_cm_percent = mean_cm/ mean_cm.sum(axis = 1, keepdims = True) *100
 plt.figure(figsize=(6,5))
-sns.heatmap(mean_cm_percent, annot = True, fmt = '.2f', cmap = 'Blues', cbar = False, 
+sns.heatmap(mean_cm_percent, annot = True, fmt = '.1f', cmap = 'Blues', cbar = False, 
             xticklabels = ['No Diabetes', 'Diabetes'], yticklabels = ['No Diabetes', 'Diabetes'])
-plt.title('Mean Accuracy (%) across Outer Folds')
+plt.title('Mean Confusion Matrix (%; SVM)')
 plt.ylabel('True Label')
 plt.xlabel('Predicted Label')
 cm__mean_path = f'../../output/SVM_output/Mean_CM.png'
-plt.savefig(cm__mean_path)
+plt.savefig(cm__mean_path, dpi = 300)
 plt.close()
 
 print(f'ROC AUC: {np.mean(roc_auc_list):.3f} ± {np.std(roc_auc_list):.3f}')
@@ -319,9 +326,21 @@ all_X_test = pd.concat(shap_test_sets, axis = 0)
 
 all_X_test.columns = feature_names
 
-plt.figure(figsize=(10, 6))
-shap.summary_plot(all_shap_values, all_X_test, feature_names = feature_names, show = False)
-plt.tight_layout
+plt.style.use('seaborn-v0_8-whitegrid')
+
+plt.figure(figsize=(10, 8))
+shap.summary_plot(all_shap_values,
+                    all_X_test,
+                    feature_names = feature_names,
+                    plot_type = 'dot',
+                    color_bar_label = 'Feature Value',
+                    show = False)
+
+plt.title('Linear SVM - SHAP Feature Importance\n(Aggregated Across Outer Folds)', fontsize = 14, fontweight = 'bold', pad = 20)
+plt.xlabel('SHAP Value (Impact on Predicting Diabetes)', fontsize = 12)
+plt.ylabel('Feature', fontsize = 12)
+
+plt.tight_layout()
 plt.savefig('../../output/SVM_output/SVM_SHAP_summary.png', dpi = 300)
 plt.close()
 
