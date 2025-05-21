@@ -237,7 +237,7 @@ plt.close()
 mean_cm = np.mean(all_conf_matrices, axis = 0)
 mean_cm_percent = mean_cm/ mean_cm.sum(axis = 1, keepdims = True) *100
 plt.figure(figsize=(6,5))
-sns.heatmap(mean_cm_percent, annot = True, fmt = '.1f', cmap = 'Blues', cbar = False, 
+sns.heatmap(mean_cm_percent, annot = True, fmt = '.1f', cmap = 'Blues', cbar = True, 
             xticklabels = ['No Diabetes', 'Diabetes'], yticklabels = ['No Diabetes', 'Diabetes'])
 plt.title('Mean Confusion Matrix (%; SVM)')
 plt.ylabel('True Label')
@@ -336,7 +336,7 @@ shap.summary_plot(all_shap_values,
                     color_bar_label = 'Feature Value',
                     show = False)
 
-plt.title('Linear SVM - SHAP Feature Importance\n(Aggregated Across Outer Folds)', fontsize = 14, fontweight = 'bold', pad = 20)
+plt.title('Linear SVM - SHAP Summary Plot\n(Aggregated Across Outer Folds)', fontsize = 14, fontweight = 'bold', pad = 20)
 plt.xlabel('SHAP Value (Impact on Predicting Diabetes)', fontsize = 12)
 plt.ylabel('Feature', fontsize = 12)
 
