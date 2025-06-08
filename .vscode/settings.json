@@ -6,3 +6,9 @@
         "scminput": false
     }
 }
+{
+    'python.analysis.extraPaths' :
+    [
+        './support'
+    ]
+}
