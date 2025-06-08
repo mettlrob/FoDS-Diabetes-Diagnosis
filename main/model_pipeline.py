@@ -19,6 +19,17 @@ from sklearn.metrics import (
     confusion_matrix,
 )
 
+# ---- Importing custom module for plotting ----
+import os
+import sys
+# Ensure the project root is on sys.path so we can import support package
+this_dir = os.path.dirname(os.path.realpath(__file__))
+project_root = os.path.abspath(os.path.join(this_dir, '..'))
+sys.path.insert(0, project_root)
+from support.plotting_module import plot_roc_curves, plot_confusion_matrices
+
+
+
 # ---- Temporary Debug Imputer ----
 from sklearn.impute import KNNImputer as SKKNNImputer
 class DebugKNNImputer(SKKNNImputer):
@@ -41,7 +52,7 @@ class DebugKNNImputer(SKKNNImputer):
 
 
 def load_data():
-    file_path = '../Data_Processing/nan_df.csv' # Adjust the path as needed
+    file_path = '../data/nan_df.csv' # Adjust the path as needed
     df = pd.read_csv(file_path)
     X = df.drop(columns = ['Outcome'])
     y = df['Outcome']
@@ -111,8 +122,15 @@ def evaluate_models(X, y):
         pipeline = Pipeline([
             ('imputer', imputer),
             ('scaler', scaler),
-            ('clf', base_clf)
-        ])
+            ('clf', base_clf),     
+        ], verbose= False)
+
+        # ---- KNN processing steps? ----#
+
+
+
+        #------------------------------#
+
         # Inner-loop GridSearchCV
         grid_search = GridSearchCV(
             estimator=pipeline,
@@ -172,9 +190,16 @@ def main():
 
     #Run nested CV evaluation
     results = evaluate_models(X, y)
-    print(results.keys())
-    from pprint import pprint
-    #pprint(results)
+    
+    # #Reconstruct outer CV splits for consistent plotting
+    # outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    # splits = list(outer_cv.split(X, y))
+
+    #Plot and save
+    # plot_roc_curves(results, X.values, y.values, splits)
+    # plot_confusion_matrices(results, X.values, y.values, splits)
+
+
 
 if __name__ == "__main__":
     main()

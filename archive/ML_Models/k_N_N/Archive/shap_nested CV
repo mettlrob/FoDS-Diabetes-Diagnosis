@@ -1,0 +1,115 @@
+# --- Cross-validation configuration ---
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+# --- Hyperparameter grid for KNN ---
+parameters = {
+    'n_neighbors': [3, 5, 7, 9, 11, 15, 21],
+    'weights': ['uniform', 'distance'],
+    'metric': ['euclidean', 'manhattan']
+}
+
+# --- Initialize storage ---
+metrics = {'accuracy': [], 'precision': [], 'recall': [], 'f1': [], 'roc_auc': []}
+models = []
+f1_scores = []
+roc_curves = []
+conf_matrices = []
+SHAP_values_per_fold = []
+fold = 1
+
+# --- Cross-validation loop ---
+for train_index, test_index in cv.split(X, y):
+    print(f'\n--- Working on fold {fold} ---')
+
+    # Split
+    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+    # SMOTE
+    smote = SMOTE(random_state=fold)
+    X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
+
+    # Scaling
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train_resampled)
+    X_test_scaled = scaler.transform(X_test)
+
+    # Grid search
+    knn = KNeighborsClassifier()
+    clf_GS = GridSearchCV(knn, parameters, cv=5, scoring='f1')
+    clf_GS.fit(X_train_scaled, y_train_resampled)
+
+    # Evaluate
+    best_model = clf_GS.best_estimator_
+    y_pred = best_model.predict(X_test_scaled)
+    y_proba = best_model.predict_proba(X_test_scaled)[:, 1]
+
+    # --- SHAP explanation using KernelExplainer with KMeans background ---
+    background = shap.kmeans(X_train_scaled, 30)  # Reduce background for speed
+    explainer = shap.KernelExplainer(best_model.predict_proba, background)
+    shap_values = explainer.shap_values(X_test_scaled)
+
+    SHAP_values_per_fold.append({
+        'fold': fold,
+        'shap_values_class1': shap_values[1],  # For binary class 1
+        'X_test_scaled': X_test_scaled,
+        'feature_names': X.columns.tolist()
+    })
+
+    # --- Metrics ---
+    fpr, tpr, _ = roc_curve(y_test, y_proba)
+    roc_auc = auc(fpr, tpr)
+    metrics['roc_auc'].append(roc_auc)
+    roc_curves.append((fpr, tpr, roc_auc, fold))
+    plt.plot(fpr, tpr, label=f'Fold {fold} (AUC = {roc_auc:.2f})')
+
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred)
+    rec = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+
+    print(f"Fold {fold} — F1 score: {f1:.4f}")
+    print(f"  Accuracy: {acc:.4f}")
+    print(f"  Precision: {prec:.4f}")
+    print(f"  Recall: {rec:.4f}")
+    print(f"  ROC AUC: {roc_auc:.4f}")
+    print('  Best n_neighbors:', best_model.get_params()['n_neighbors'])
+    print('  Best weights:', best_model.get_params()['weights'])
+    print('  Best metric:', best_model.get_params()['metric'])
+
+    # Store
+    metrics['accuracy'].append(acc)
+    metrics['precision'].append(prec)
+    metrics['recall'].append(rec)
+    metrics['f1'].append(f1)
+    f1_scores.append(f1)
+    models.append(best_model)
+    conf_matrices.append(confusion_matrix(y_test, y_pred))
+
+    fold += 1
+
+# --- Best model info ---
+best_index = f1_scores.index(max(f1_scores))
+best_model_overall = models[best_index]
+params = best_model_overall.get_params()
+b_model = KNeighborsClassifier(**params)
+
+# --- Final ROC curve ---
+plt.plot([0, 1], [0, 1], linestyle='--', color='red', label='random classifier')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve — KNN (5-fold CV)', fontsize=14)
+plt.legend(loc='lower right', fontsize=10)
+plt.show()
+
+# ----------------------------------------------------
+# ✅ SHAP Summary Plot (after all folds)
+# ----------------------------------------------------
+# Stack SHAP values and X_test across folds
+all_shap_values = np.vstack([entry['shap_values_class1'] for entry in SHAP_values_per_fold])
+all_X_test_scaled = np.vstack([entry['X_test_scaled'] for entry in SHAP_values_per_fold])
+feature_names = SHAP_values_per_fold[0]['feature_names']
+X_shap_df = pd.DataFrame(all_X_test_scaled, columns=feature_names)
+
+# SHAP Summary Plot
+shap.summary_plot(all_shap_values, X_shap_df)
