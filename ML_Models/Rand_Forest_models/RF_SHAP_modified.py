@@ -54,7 +54,8 @@ param_grid = {
     'n_estimators': [5, 10, 50, 100, 200],
     'max_depth': [10, 20, None],
     'min_samples_split': [2, 5],
-    'min_samples_leaf': [1, 3]
+    'min_samples_leaf': [1, 3],
+    
 }
 innercv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 outer_cv_folds = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -91,7 +92,7 @@ for i, (train_idx, val_idx) in enumerate(outer_cv_folds.split(X_train_np, y_trai
     X_outer_train, X_outer_val = X_train_np[train_idx], X_train_np[val_idx]
     y_outer_train, y_outer_val = y_train_np[train_idx], y_train_np[val_idx]
 
-    rf_base = RandomForestClassifier(random_state=42, class_weight='balanced')
+    rf_base = RandomForestClassifier(random_state=42, class_weight='balanced', bootstrap=True)
 
     inner_cv_grid_search = GridSearchCV(estimator=rf_base, param_grid=param_grid,
                                     cv= innercv,
@@ -173,7 +174,7 @@ shap.summary_plot(shap_values_concat,
                   show = False)
                    
                    
-plt.title("Random Forest - SHAP Feature Importance\n(Aggregated Across Outer Folds)", fontsize=14, fontweight='bold', pad=20)
+plt.title("Random Forest - SHAP Summary Plot\n(Aggregated Across Outer Folds)", fontsize=14, fontweight='bold', pad=20)
 plt.xlabel("SHAP Value (Impact on Predicting Diabetes)", fontsize=12)
 plt.ylabel("Feature", fontsize=12)
 plt.tight_layout()
@@ -211,7 +212,7 @@ cv_summary_df = pd.DataFrame(cv_summary_data)
 # Dateipfad für die Zusammenfassungs-CSV im Data_Processing Ordner
 # Der Dateiname im Screenshot deines Kollegen ist 'rfc_summary_metrics.csv'
 # Du könntest einen ähnlichen Namen wählen oder ihn anpassen
-summary_filename = "rfc_cv_summary_metrics.csv" # Angepasster Name für Klarheit (CV Summary)
+summary_filename = "rfc_summary_metrics_modified.csv" # Angepasster Name für Klarheit (CV Summary)
 cv_summary_filepath = os.path.join("Data_Processing", summary_filename)
 
 cv_summary_df.to_csv(cv_summary_filepath, index=False)
