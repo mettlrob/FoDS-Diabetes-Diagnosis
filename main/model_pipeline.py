@@ -2,22 +2,13 @@
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
-from sklearn.impute import KNNImputer, SimpleImputer
+from sklearn.impute import KNNImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_validate
-from sklearn.metrics import (
-    make_scorer,
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
-    confusion_matrix,
-)
 
 # ---- Importing custom module for plotting ----
 import os
@@ -27,6 +18,9 @@ this_dir = os.path.dirname(os.path.realpath(__file__))
 project_root = os.path.abspath(os.path.join(this_dir, '..'))
 sys.path.insert(0, project_root)
 from support.plotting_module import plot_roc_curves, plot_confusion_matrices
+from support.shap_module import plot_shap_summary
+# --------------------------------
+
 
 
 
@@ -59,10 +53,6 @@ def load_data():
     return X, y
 
 def evaluate_models(X, y):
-    #ideal imputer was defined from proc_data.ipynb in a cross-validation test loop.
-    #imputer = KNNImputer(n_neighbors=5)
-    imputer = SimpleImputer(strategy='median')  # Use SimpleImputer for simplicity in this example
-    scaler = StandardScaler()
 
     #model selection
     models = {
@@ -87,7 +77,7 @@ def evaluate_models(X, y):
         },
         'KNN' : {
             'clf__n_neighbors': [3, 5, 7, 15, 20],
-            'clf__weights': ['uniform', 'distance']
+            'clf__weights': ['uniform']
         },
         'RandomForest' : {
             'clf__n_estimators': [50, 100],
@@ -117,6 +107,11 @@ def evaluate_models(X, y):
     # Loop through each model
     for name, base_clf in models.items():
         print(f"\n### Evaluating {name}... ###")
+
+        #ideal imputer was defined from proc_data.ipynb in a cross-validation test loop. reinstantiate in loop to minimize dataleakage. 
+        imputer = KNNImputer(n_neighbors=5)
+        #imputer = SimpleImputer(strategy='median')  # Use SimpleImputer for simplicity in this example
+        scaler = StandardScaler()
 
         #build the pipeline
         pipeline = Pipeline([
@@ -154,12 +149,7 @@ def evaluate_models(X, y):
             return_estimator=True,
             n_jobs=1
         )
-        # for fold_idx, gs in enumerate(cv_results['estimator']):
-        #     print(f"\n— Fold {fold_idx+1} inner‐CV results —")
-        #     print(" Best params:", gs.best_params_)
-        #     # if you enabled multi‐metric scoring:
-        #     print(" F1  at best params:", gs.best_score_)
-        #     print(" Prec at best params:", gs.cv_results_['mean_test_precision'][gs.best_index_])
+       
         for fold_idx, gs in enumerate(cv_results['estimator']):
             print(f"\nFold {fold_idx+1} best inner‐CV params: {gs.best_params_}")
             for metric in scoring.keys():  
@@ -181,6 +171,7 @@ def evaluate_models(X, y):
                 f' {metric:10s} train: {np.mean(train_scores):.3f} ± {np.std(train_scores):.3f} '
                 f'test: {np.mean(test_scores):.3f} ± {np.std(test_scores):.3f}'
             )
+    
     return all_results
 
 def main():
@@ -192,12 +183,14 @@ def main():
     results = evaluate_models(X, y)
     
     # #Reconstruct outer CV splits for consistent plotting
-    # outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    # splits = list(outer_cv.split(X, y))
+    outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    splits = list(outer_cv.split(X, y))
 
     #Plot and save
-    # plot_roc_curves(results, X.values, y.values, splits)
-    # plot_confusion_matrices(results, X.values, y.values, splits)
+    plot_roc_curves(results, X, y, splits)
+    plot_confusion_matrices(results, X, y, splits)
+    plot_shap_summary(results, X, y, splits)
+    print("\nModel evaluation and plotting complete. Outputs saved in pipeline_output directory.")
 
 
 
