@@ -1,22 +1,40 @@
 #%%
-import numpy as np
-import pandas as pd
-from sklearn.pipeline import Pipeline
-from sklearn.impute import KNNImputer, SimpleImputer
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_validate
+
+import numpy as np                            # Numerical operations (arrays, vectorized math)
+import pandas as pd                           # Data loading and DataFrame manipulation
+from sklearn.metrics.pairwise import manhattan_distances
+
+# === Pipelines ===
+from sklearn.pipeline import Pipeline                         # Standard sklearn pipeline
+from imblearn.pipeline import Pipeline as ImbPipeline         # Pipeline supporting imbalanced-learn steps (e.g., SMOTE)
+
+# ===  Imbalanced Data Handling ===
+from imblearn.over_sampling import SMOTE                      # Synthetic Minority Over-sampling Technique for class imbalance
+
+# === Preprocessing ===
+from sklearn.impute import SimpleImputer, KNNImputer          # Missing value imputation (mean/median or KNN-based)
+from sklearn.preprocessing import StandardScaler              # Standardization (z-score normalization)
+
+# ===  Classifiers ===
+from sklearn.linear_model import LogisticRegression           # Logistic regression classifier
+from sklearn.svm import SVC                                   # Support Vector Classifier
+from sklearn.neighbors import KNeighborsClassifier            # K-Nearest Neighbors classifier
+from sklearn.ensemble import RandomForestClassifier           # Random Forest classifier
+
+# ===  Model Selection & Cross-Validation ===
+from sklearn.model_selection import GridSearchCV              # Hyperparameter tuning via grid search
+from sklearn.model_selection import StratifiedKFold           # Stratified K-fold cross-validation
+from sklearn.model_selection import cross_validate            # Evaluate models across folds with multiple metrics
+
+# === Evaluation Metrics ===
 from sklearn.metrics import (
-    make_scorer,
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
-    confusion_matrix,
+    accuracy_score,                                            # Classification accuracy
+    precision_score,                                           # Positive predictive value
+    recall_score,                                              # Sensitivity / True positive rate
+    f1_score,                                                  # Harmonic mean of precision and recall
+    roc_auc_score,                                             # Area under the ROC curve
+    confusion_matrix,                                          # Confusion matrix (TP, FP, FN, TN)
+    make_scorer                                                # Custom scoring for model evaluation
 )
 
 # ---- Importing custom module for plotting ----
@@ -86,8 +104,9 @@ def evaluate_models(X, y):
             #'clf__gamma': ['scale', 'auto']
         },
         'KNN' : {
-            'clf__n_neighbors': [3, 5, 7, 15, 20],
-            'clf__weights': ['uniform', 'distance']
+            'clf__n_neighbors': list(range(15, 41, 2)),
+            'clf__weights': ['distance', 'uniform'],
+            'clf__metric': ['manhattan','euclidean'],
         },
         'RandomForest' : {
             'clf__n_estimators': [50, 100],
@@ -118,16 +137,24 @@ def evaluate_models(X, y):
     for name, base_clf in models.items():
         print(f"\n### Evaluating {name}... ###")
 
-        #build the pipeline
-        pipeline = Pipeline([
-            ('imputer', imputer),
-            ('scaler', scaler),
-            ('clf', base_clf),     
-        ], verbose= False)
 
-        # ---- KNN processing steps? ----#
+        # ---- KNN processing steps? ----
+        # --------Use SMOTE for KNN only--------
+        if name == 'KNN':
+            pipeline = ImbPipeline([
+                ('imputer', imputer),
+                ('smote', SMOTE(random_state=42)),
+                ('scaler', scaler),
+                ('clf', base_clf)
+            ])
 
-
+        #--------build the pipeline---------
+        else:
+            pipeline = Pipeline([
+                ('imputer', imputer),
+                ('scaler', scaler),
+                ('clf', base_clf)
+            ],verbose= False)
 
         #------------------------------#
 
