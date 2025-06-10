@@ -52,7 +52,7 @@ class DebugKNNImputer(SKKNNImputer):
 
 
 def load_data():
-    file_path = '../data/nan_df.csv' # Adjust the path as needed
+    file_path = '../../data/nan_df.csv' # Adjust the path as needed
     df = pd.read_csv(file_path)
     X = df.drop(columns = ['Outcome'])
     y = df['Outcome']
@@ -76,7 +76,7 @@ def evaluate_models(X, y):
     param_grids = {
         'LogisticRegression' : {
             #'clf__' prefix refers to the pipeline step named 'clf', so 'C' becomes 'clf__C'.
-            'clf__C': [0.01, 0.1, 1, 10, 100],
+            'clf__C': [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15],   #0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.2, 0.25, 0.3, 1, 10, 100
             'clf__penalty': ['l2', 'l1', None]
 
         },
