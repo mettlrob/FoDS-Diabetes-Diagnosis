@@ -1,4 +1,5 @@
 #%%
+<<<<<<< HEAD
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
@@ -9,6 +10,45 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_validate
+=======
+
+import numpy as np                            # Numerical operations (arrays, vectorized math)
+import pandas as pd                           # Data loading and DataFrame manipulation
+from sklearn.metrics.pairwise import manhattan_distances
+
+# === Pipelines ===
+from sklearn.pipeline import Pipeline                         # Standard sklearn pipeline
+from imblearn.pipeline import Pipeline as ImbPipeline         # Pipeline supporting imbalanced-learn steps (e.g., SMOTE)
+
+# ===  Imbalanced Data Handling ===
+from imblearn.over_sampling import SMOTE                      # Synthetic Minority Over-sampling Technique for class imbalance
+
+# === Preprocessing ===
+from sklearn.impute import SimpleImputer, KNNImputer          # Missing value imputation (mean/median or KNN-based)
+from sklearn.preprocessing import StandardScaler              # Standardization (z-score normalization)
+
+# ===  Classifiers ===
+from sklearn.linear_model import LogisticRegression           # Logistic regression classifier
+from sklearn.svm import SVC                                   # Support Vector Classifier
+from sklearn.neighbors import KNeighborsClassifier            # K-Nearest Neighbors classifier
+from sklearn.ensemble import RandomForestClassifier           # Random Forest classifier
+
+# ===  Model Selection & Cross-Validation ===
+from sklearn.model_selection import GridSearchCV              # Hyperparameter tuning via grid search
+from sklearn.model_selection import StratifiedKFold           # Stratified K-fold cross-validation
+from sklearn.model_selection import cross_validate            # Evaluate models across folds with multiple metrics
+
+# === Evaluation Metrics ===
+from sklearn.metrics import (
+    accuracy_score,                                            # Classification accuracy
+    precision_score,                                           # Positive predictive value
+    recall_score,                                              # Sensitivity / True positive rate
+    f1_score,                                                  # Harmonic mean of precision and recall
+    roc_auc_score,                                             # Area under the ROC curve
+    confusion_matrix,                                          # Confusion matrix (TP, FP, FN, TN)
+    make_scorer                                                # Custom scoring for model evaluation
+)
+>>>>>>> f23d5962f4c23dd837d6d8443e4cda6895960aab
 
 # ---- Importing custom module for plotting ----
 import os
@@ -46,7 +86,7 @@ class DebugKNNImputer(SKKNNImputer):
 
 
 def load_data():
-    file_path = '../data/nan_df.csv' # Adjust the path as needed
+    file_path = '../../data/nan_df.csv' # Adjust the path as needed
     df = pd.read_csv(file_path)
     X = df.drop(columns = ['Outcome'])
     y = df['Outcome']
@@ -66,7 +106,7 @@ def evaluate_models(X, y):
     param_grids = {
         'LogisticRegression' : {
             #'clf__' prefix refers to the pipeline step named 'clf', so 'C' becomes 'clf__C'.
-            'clf__C': [0.01, 0.1, 1, 10, 100],
+            'clf__C': [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15],   #0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.2, 0.25, 0.3, 1, 10, 100
             'clf__penalty': ['l2', 'l1', None]
 
         },
@@ -76,8 +116,14 @@ def evaluate_models(X, y):
             #'clf__gamma': ['scale', 'auto']
         },
         'KNN' : {
+<<<<<<< HEAD
             'clf__n_neighbors': [3, 5, 7, 15, 20],
             'clf__weights': ['uniform']
+=======
+            'clf__n_neighbors': list(range(15, 41, 2)),
+            'clf__weights': ['distance', 'uniform'],
+            'clf__metric': ['manhattan','euclidean'],
+>>>>>>> f23d5962f4c23dd837d6d8443e4cda6895960aab
         },
         'RandomForest' : {
             'clf__n_estimators': [50, 100],
@@ -108,6 +154,7 @@ def evaluate_models(X, y):
     for name, base_clf in models.items():
         print(f"\n### Evaluating {name}... ###")
 
+<<<<<<< HEAD
         #ideal imputer was defined from proc_data.ipynb in a cross-validation test loop. reinstantiate in loop to minimize dataleakage. 
         imputer = KNNImputer(n_neighbors=5)
         #imputer = SimpleImputer(strategy='median')  # Use SimpleImputer for simplicity in this example
@@ -121,8 +168,26 @@ def evaluate_models(X, y):
         ], verbose= False)
 
         # ---- KNN processing steps? ----#
+=======
+>>>>>>> f23d5962f4c23dd837d6d8443e4cda6895960aab
 
+        # ---- KNN processing steps? ----
+        # --------Use SMOTE for KNN only--------
+        if name == 'KNN':
+            pipeline = ImbPipeline([
+                ('imputer', imputer),
+                ('smote', SMOTE(random_state=42)),
+                ('scaler', scaler),
+                ('clf', base_clf)
+            ])
 
+        #--------build the pipeline---------
+        else:
+            pipeline = Pipeline([
+                ('imputer', imputer),
+                ('scaler', scaler),
+                ('clf', base_clf)
+            ],verbose= False)
 
         #------------------------------#
 
