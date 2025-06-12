@@ -1,7 +1,6 @@
-#%%
+      
 import numpy as np                                            # Numerical operations (arrays, vectorized math)
 import pandas as pd                                           # Data loading and DataFrame manipulation
-from sklearn.metrics.pairwise import manhattan_distances
 
 # === Pipelines ===
 from sklearn.pipeline import Pipeline                         # Standard sklearn pipeline
@@ -28,13 +27,15 @@ from sklearn.model_selection import cross_validate            # Evaluate models 
 
 # ---- Importing custom module for plotting ----
 import os
-import sys
+import sys 
 # Ensure the project root is on sys.path so we can import support package
 this_dir = os.path.dirname(os.path.realpath(__file__))
 project_root = os.path.abspath(os.path.join(this_dir, '..'))
 sys.path.insert(0, project_root)
-from support.plotting_module import plot_roc_curves, plot_confusion_matrices
+from support.plotting_module import plot_roc_curves, plot_confusion_matrices, plot_pr_curves, plot_metric_comparison
 from support.shap_module import plot_shap_summary
+
+
 # --------------------------------
 
 # ---- Temporary Debug Imputer ----
@@ -64,7 +65,6 @@ def load_data():
     return X, y
 
 def evaluate_models(X, y):
-
     #model selection
     models = {
         'LogisticRegression' : LogisticRegression(solver = 'saga', class_weight = 'balanced', max_iter= 1000, random_state= 42),
@@ -208,6 +208,8 @@ def main():
     plot_roc_curves(results, X, y, splits)
     plot_confusion_matrices(results, X, y, splits)
     plot_shap_summary(results, X, y, splits)
+    plot_pr_curves(results, X, y, splits)
+    plot_metric_comparison(results)
     print("\nModel evaluation and plotting complete. Outputs saved in pipeline_output directory.")
 
 
