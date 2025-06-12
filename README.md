@@ -24,7 +24,7 @@
 
 ## About The Project
 
-This project aims to develop an end-to-end machine learning pipeline to predict the likelihood of diabetes onset in female Pima Indian patients.  
+This project aims to develop an end-to-end machine learning pipeline to predict the likelihood of diabetes onset.  
 It is based on the [Pima Indian Diabetes Dataset](https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database), a well-established benchmark in clinical machine learning tasks.
 
 We implemented standardized preprocessing, SMOTE-based balancing, and multiple classification algorithms including KNN, SVM, Random Forest, and Logistic Regression.  
