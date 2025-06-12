@@ -7,6 +7,35 @@
 
 ---
 
+
+## 📖 Table of Contents
+
+1. [About the Project](#about-the-project)  
+   └ [Built With](#built-with)  
+2. [Getting Started](#getting-started)  
+   └ [Dependencies](#dependencies)  
+   └ [Installation](#installation)  
+3. [Usage](#usage)  
+4. [Roadmap](#roadmap)  
+5. [Contributing](#contributing)  
+6. [License](#license)  
+7. [Authors](#authors)  
+8. [Acknowledgements](#acknowledgements)  
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## 📋 Description
 
 This project applies a complete machine learning pipeline to predict diabetes onset in female patients using the **Pima Indian Diabetes Dataset**. The goal is to develop a robust, interpretable, and generalizable predictive model by integrating:
