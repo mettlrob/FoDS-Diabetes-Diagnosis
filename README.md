@@ -52,7 +52,7 @@ We recommend installing them in a clean virtual environment using `conda`.
 - **Python 3.10**
 
 - **NumPy 1.26.4**
-```bash conda install -c conda-forge numpy=1.26.4
+
 
 
 
