@@ -40,7 +40,20 @@ Below is a visual summary of our results:
 > Glucose, BMI, and Age were consistently ranked as top predictors across all models.
 
 
+## Getting Started
 
+To get a local copy up and running follow these simple steps.
+
+### Dependencies
+
+Below are the main Python libraries and tools required to run this project.  
+We recommend installing them in a clean virtual environment using `conda`.
+
+- **Python 3.10**
+
+- **NumPy 1.26.4**
+```bash
+conda install -c conda-forge numpy=1.26.4
 
 
 
