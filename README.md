@@ -30,14 +30,7 @@ It is based on the [Pima Indian Diabetes Dataset](https://www.kaggle.com/dataset
 We implemented standardized preprocessing, SMOTE-based balancing, and multiple classification algorithms including KNN, SVM, Random Forest, and Logistic Regression.  
 Nested cross-validation was used to ensure robust model selection and performance evaluation.
 
-> You can read our final report here:  
-[📄 Final Project Report (PDF)](https://github.com/yourusername/fs25-diabetes-prediction/blob/main/docs/FS25_Report.pdf)
 
-Below is a visual summary of our results:
-
-![ROC Curve Example](https://github.com/yourusername/fs25-diabetes-prediction/raw/main/results/roc_curve.png)
-
-> Glucose, BMI, and Age were consistently ranked as top predictors across all models.
 
 
 ## Getting Started
