@@ -64,7 +64,7 @@ To run the diabetes prediction pipeline:
 1. **Clone the repository**  
    ```bash
    git clone https://github.com/mettlrob/FoDS-Diabetes-Diagnosis.git
-cd FoDS-Diabetes-Diagnosis
+   cd FoDS-Diabetes-Diagnosis
 
 ## Authors
 
