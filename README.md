@@ -61,10 +61,17 @@ We recommend installing them in a clean virtual environment using `conda`.
 
 To run the diabetes prediction pipeline:
 
-1. **Clone the repository**  
+1. **Clone the repository**
+   
    ```bash
    git clone https://github.com/mettlrob/FoDS-Diabetes-Diagnosis.git
    cd FoDS-Diabetes-Diagnosis
+
+
+2. **Set up the environment**
+We recommend using a virtual environment:
+
+
 
 ## Authors
 
