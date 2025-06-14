@@ -14,11 +14,7 @@
    └ [Dependencies](#dependencies)  
    └ [Installation](#installation)  
 3. [Usage](#usage)  
-4. [Roadmap](#roadmap)  
-5. [Contributing](#contributing)  
-6. [License](#license)  
-7. [Authors](#authors)  
-8. [Acknowledgements](#acknowledgements)  
+4. [Authors](#authors)  
 
 ---
 
