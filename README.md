@@ -19,13 +19,7 @@
 ---
 
 ## About The Project
-
-This project aims to develop an end-to-end machine learning pipeline to predict the likelihood of diabetes onset.  
-It is based on the [Pima Indian Diabetes Dataset](https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database), a well-established benchmark in clinical machine learning tasks.
-
-We implemented standardized preprocessing, SMOTE-based balancing, and multiple classification algorithms including KNN, SVM, Random Forest, and Logistic Regression.  
-Nested cross-validation was used to ensure robust model selection and performance evaluation.
-
+This project implements a robust end-to-end machine learning pipeline for predicting the likelihood of diabetes onset, using the [Pima Indian Diabetes Dataset](https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database)—a widely recognized benchmark in clinical data science. The workflow includes standardized preprocessing, modular pipeline construction, and multiple classification algorithms (KNN, SVM, Random Forest, and Logistic Regression). To ensure unbiased model selection and reliable generalization estimates, we employ nested cross-validation, fully encapsulating both hyperparameter tuning and evaluation within a reproducible scikit-learn pipeline.
 
 
 
