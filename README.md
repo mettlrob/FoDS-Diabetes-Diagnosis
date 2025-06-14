@@ -49,8 +49,11 @@ We recommend installing them in a clean virtual environment using `conda`.
 ## Authors
 
 Tobias Herrmann
+
 Michael Keller
+
 Robin Mettler
+
 Georg Weber
 
 
