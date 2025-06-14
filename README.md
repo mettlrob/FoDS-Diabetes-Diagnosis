@@ -75,6 +75,9 @@ We recommend using a virtual environment:
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    pip install -r requirements.txt
 
+3. **Run the main script**
+   ```bash
+   python main.py
 
 ## Authors
 
