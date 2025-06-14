@@ -40,7 +40,21 @@ We recommend installing them in a clean virtual environment using `conda`.
 
 - **Python 3.10**
 
+- **Pandas 2.2.1**
+
 - **NumPy 1.26.4**
+
+- **matplotlib 3.8.4**
+
+- **Seaborn 0.13.2**
+
+- **Scikit Learn 1.4.2**
+
+- **Imbalanced-learn 0.12.2**
+
+
+
+
 
 
 ## Usage
