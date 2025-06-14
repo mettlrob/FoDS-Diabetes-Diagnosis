@@ -6,7 +6,7 @@
 ![Models](https://img.shields.io/badge/Models-KNN%2C%20RF%2C%20SVM%2C%20LogReg-orange)
 
 ---
-## 📖 Table of Contents
+## Table of Contents
 
 1. [About the Project](#about-the-project)  
    └ [Built With](#built-with)  
