@@ -1,7 +1,7 @@
 # 🩺 Diabetes Prediction using Machine Learning  
 *FS25 Foundations of Data Science*
 
-![Python](https://img.shields.io/badge/Python-3.10-blue)
+![Python](https://img.shields.io/badge/Python-3.11.11-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Models](https://img.shields.io/badge/Models-KNN%2C%20RF%2C%20SVM%2C%20LogReg-orange)
 
