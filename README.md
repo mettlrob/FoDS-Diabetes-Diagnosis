@@ -1,4 +1,4 @@
-# 🩺 Diabetes Prediction using Machine Learning  
+#  Diabetes Prediction using Machine Learning  
 *FS25 Foundations of Data Science*
 
 ![Python](https://img.shields.io/badge/Python-3.11.11-blue)
@@ -7,7 +7,7 @@
 
 ---
 
-## 📚 Table of Contents
+##  Table of Contents
 
 1. [About the Project](#about-the-project)  
    └ [Built With](#built-with)  
@@ -20,7 +20,7 @@
 
 ---
 
-## 📌 About the Project
+##  About the Project
 
 This project implements a robust end-to-end machine learning pipeline for predicting the likelihood of diabetes onset, using the [Pima Indian Diabetes Dataset](https://www.kaggle.com/datasets/uciml/pima-indians-diabetes-database) — a widely recognized benchmark in clinical data science.  
 The workflow includes standardized preprocessing, modular pipeline construction, and multiple classification algorithms (KNN, SVM, Random Forest, and Logistic Regression).  
@@ -28,11 +28,11 @@ To ensure unbiased model selection and reliable generalization estimates, we emp
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 To get a local copy up and running, follow these simple steps.
 
-### 🔧 Dependencies
+###  Dependencies
 
 We recommend creating a clean virtual environment using `conda` or `venv`.  
 This project depends on the following libraries:
@@ -47,7 +47,7 @@ This project depends on the following libraries:
 
 ---
 
-## 📁 Repository Structure
+##  Repository Structure
 
 ```
 FoDS-Diabetes-Diagnosis/
@@ -63,7 +63,7 @@ FoDS-Diabetes-Diagnosis/
 
 ---
 
-## 🛠️ Usage
+##  Usage
 
 To run the diabetes prediction pipeline:
 
@@ -90,7 +90,7 @@ python main/model_pipeline.py
 
 ---
 
-## 🧭 Roadmap
+##  Roadmap
 
 Earlier versions of this project suffered from **data leakage**, where preprocessing (e.g., imputation and scaling) occurred before train-test splitting.  
 To address this, we implemented a modular, reproducible **pipeline architecture** that performs all steps (imputation, SMOTE, scaling, classification) inside a single `sklearn` or `imbalanced-learn` pipeline.  
@@ -99,7 +99,7 @@ Earlier exploratory workflows and experiments can be found in the [`archive`](ht
 
 ---
 
-## 👥 Authors
+##  Authors
 
 - **Tobias Herrmann**  
 - **Michael Keller**  
