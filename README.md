@@ -51,9 +51,6 @@ We recommend installing them in a clean virtual environment using `conda`.
 
 
 
-
-
-
 ## Usage
 
 To run the diabetes prediction pipeline:
@@ -79,7 +76,7 @@ We recommend using a virtual environment:
 
 
 ## Repository Structure
-    ```bash
+      ```bash
       
       FoDS-Diabetes-Diagnosis/
       ├── main/                  # Contains main pipeline script
