@@ -79,28 +79,28 @@ We recommend using a virtual environment:
 
 
 ## Repository Structure
-   ```bash
+      ```bash
+      
+      FoDS-Diabetes-Diagnosis/
+      ├── main/                  # Contains main pipeline script
+      │   └── model_pipeline.py  # Core script for training and evaluation
+      ├── data/                  # Raw dataset and processed files
+      ├── pipeline_output/       # Outputs: plots, SHAP values, evaluation metrics
+      ├── support/               # Helper functions and utilities
+      ├── archive/               # Deprecated or older scripts
+      ├── README.md              # This file
+      └── diabetes_Pima_paper.pdf # PDF writeup of the project
+      
    
-   FoDS-Diabetes-Diagnosis/
-   ├── main/                  # Contains main pipeline script
-   │   └── model_pipeline.py  # Core script for training and evaluation
-   ├── data/                  # Raw dataset and processed files
-   ├── pipeline_output/       # Outputs: plots, SHAP values, evaluation metrics
-   ├── support/               # Helper functions and utilities
-   ├── archive/               # Deprecated or older scripts
-   ├── README.md              # This file
-   └── diabetes_Pima_paper.pdf # PDF writeup of the project
    
-
-
----
-
-## 👥 Authors
-
-- **Tobias Herrmann**  
-- **Michael Keller**  
-- **Robin Mettler**  
-- **Georg Weber**
+   ---
+   
+   ## Authors
+   
+   - **Tobias Herrmann**  
+   - **Michael Keller**  
+   - **Robin Mettler**  
+   - **Georg Weber**
 
 
 
