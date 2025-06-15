@@ -95,7 +95,7 @@ python main/model_pipeline.py
 Earlier versions of this project suffered from **data leakage**, where preprocessing (e.g., imputation and scaling) occurred before train-test splitting.  
 To address this, we implemented a modular, reproducible **pipeline architecture** that performs all steps (imputation, SMOTE, scaling, classification) inside a single `sklearn` or `imbalanced-learn` pipeline.  
 This pipeline is evaluated with **nested cross-validation** to ensure fair model comparison and unbiased estimates.  
-Earlier exploratory workflows and experiments can be found in the `/archive` directory.
+Earlier exploratory workflows and experiments can be found in the [`archive`](https://github.com/mettlrob/FoDS-Diabetes-Diagnosis/tree/main/archive) directory.
 
 ---
 
