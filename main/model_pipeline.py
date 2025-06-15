@@ -1,29 +1,45 @@
       
-import numpy as np                                            # Numerical operations (arrays, vectorized math)
-import pandas as pd                                           # Data loading and DataFrame manipulation
+# === Core Python Libraries ===
+import os                                                   # File path handling
+import sys                                                  # Python runtime environment
+import warnings                                             # Warning suppression
+import numpy as np                                          # Numerical operations
+import pandas as pd                                         # DataFrame operations
 
-# === Pipelines ===
-from sklearn.pipeline import Pipeline                         # Standard sklearn pipeline
-from imblearn.pipeline import Pipeline as ImbPipeline         # Pipeline supporting imbalanced-learn steps (e.g., SMOTE)
+# === Suppress All Warnings ===
+warnings.filterwarnings("ignore")
 
-# ===  Imbalanced Data Handling ===
-from imblearn.over_sampling import SMOTE                      # Synthetic Minority Over-sampling Technique for class imbalance
+# === Scikit-Learn Core ===
+from sklearn.pipeline import Pipeline                       # Standard sklearn pipeline
+from sklearn.model_selection import GridSearchCV            # Hyperparameter tuning
+from sklearn.model_selection import StratifiedKFold         # Stratified CV splits
+from sklearn.model_selection import cross_validate          # Model evaluation across CV
+from sklearn.impute import KNNImputer                       # Missing value imputation
+from sklearn.preprocessing import StandardScaler            # Feature scaling
 
-# === Preprocessing ===
-from sklearn.impute import KNNImputer                         # Missing value imputation (mean/median or KNN-based)
-from sklearn.preprocessing import StandardScaler              # Standardization (z-score normalization)
+# === Classifiers ===
+from sklearn.linear_model import LogisticRegression         # Logistic Regression
+from sklearn.svm import SVC                                 # Support Vector Classifier
+from sklearn.neighbors import KNeighborsClassifier          # K-Nearest Neighbors
+from sklearn.ensemble import RandomForestClassifier         # Random Forest Classifier
 
-# ===  Classifiers ===
-from sklearn.linear_model import LogisticRegression           # Logistic regression classifier
-from sklearn.svm import SVC                                   # Support Vector Classifier
-from sklearn.neighbors import KNeighborsClassifier            # K-Nearest Neighbors classifier
-from sklearn.ensemble import RandomForestClassifier           # Random Forest classifier
+# === Imbalanced Data Handling ===
+from imblearn.pipeline import Pipeline as ImbPipeline       # imblearn-compatible pipeline
+from imblearn.over_sampling import SMOTE                    # Synthetic oversampling
 
-# ===  Model Selection & Cross-Validation ===
-from sklearn.model_selection import GridSearchCV              # Hyperparameter tuning via grid search
-from sklearn.model_selection import StratifiedKFold           # Stratified K-fold cross-validation
-from sklearn.model_selection import cross_validate            # Evaluate models across folds with multiple metrics
+# === Plotting (Custom Module Imports) ===
+# Ensure that the support package can be imported
+this_dir = os.path.dirname(os.path.realpath(__file__))
+project_root = os.path.abspath(os.path.join(this_dir, '..'))
+sys.path.insert(0, project_root)
 
+from support.plotting_module import (                       # Custom visualizations
+    plot_roc_curves,
+    plot_confusion_matrices,
+    plot_pr_curves,
+    plot_metric_comparison
+)
+from support.shap_module import plot_shap_summary           # SHAP feature importance
 
 # ---- Importing custom module for plotting ----
 import os
@@ -34,6 +50,7 @@ project_root = os.path.abspath(os.path.join(this_dir, '..'))
 sys.path.insert(0, project_root)
 from support.plotting_module import plot_roc_curves, plot_confusion_matrices, plot_pr_curves, plot_metric_comparison
 from support.shap_module import plot_shap_summary
+
 
 
 # --------------------------------
@@ -78,7 +95,7 @@ def evaluate_models(X, y):
         'LogisticRegression' : {
             #'clf__' prefix refers to the pipeline step named 'clf', so 'C' becomes 'clf__C'.
             'clf__C': [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15],   #0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.2, 0.25, 0.3, 1, 10, 100
-            'clf__penalty': ['l2', 'l1', None]
+            'clf__penalty': ['l2', 'l1']
 
         },
         'SVC' : {
