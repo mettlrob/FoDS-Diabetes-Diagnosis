@@ -74,7 +74,7 @@ We recommend using a virtual environment:
 
 3. **Run the main script**
    ```bash
-   python main.py
+   python model_pipeline.py
 
 
 ## Repository Structure
