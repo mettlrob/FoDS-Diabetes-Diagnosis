@@ -79,18 +79,7 @@ We recommend using a virtual environment:
 
 ## Repository Structure
 
-FoDS-Diabetes-Diagnosis/
-│
-├── main/                    # Contains main pipeline script (model_pipeline.py)
-│   └── model_pipeline.py    # Core script for training and evaluation
-│
-├── data/                    # Raw dataset and processed files
-├── pipeline_output/         # Outputs: plots, SHAP values, evaluation metrics
-├── support/                 # Helper functions and utilities
-├── archive/                 # Deprecated or older scripts
-│
-├── README.md                # This file
-├── diabetes_Pima_paper.pdf  # PDF writeup of the project
+<pre> ## 📁 Repository Structure FoDS-Diabetes-Diagnosis/ ├── main/ # Contains main pipeline script │ └── model_pipeline.py # Core script for training and evaluation ├── data/ # Raw dataset and processed files ├── pipeline_output/ # Outputs: plots, SHAP values, evaluation metrics ├── support/ # Helper functions and utilities ├── archive/ # Deprecated or older scripts ├── README.md # Project README └── diabetes_Pima_paper.pdf # Final PDF writeup of the project </pre>
 
 
 
