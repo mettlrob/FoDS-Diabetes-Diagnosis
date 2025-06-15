@@ -12,8 +12,7 @@
 1. [About the Project](#about-the-project)  
    └ [Built With](#built-with)  
 2. [Getting Started](#getting-started)  
-   └ [Dependencies](#dependencies)  
-   └ [Installation](#installation)  
+   └ [Dependencies](#dependencies)    
 3. [Repository Structure](#repository-structure)  
 4. [Usage](#usage)  
 5. [Roadmap](#roadmap)  
@@ -38,13 +37,13 @@ To get a local copy up and running, follow these simple steps.
 We recommend creating a clean virtual environment using `conda` or `venv`.  
 This project depends on the following libraries:
 
-- **Python 3.10**  
-- **Pandas 2.2.1**  
-- **NumPy 1.26.4**  
+- **Python 3.11.11**  
+- **Pandas 2.2.3**  
+- **NumPy 2.2.2**  
 - **matplotlib 3.8.4**  
 - **Seaborn 0.13.2**  
-- **Scikit Learn 1.4.2**  
-- **Imbalanced-learn 0.12.2**  
+- **Scikit Learn 1.6.1**  
+- **Imbalanced-learn 0.13.0**  
 
 ---
 
