@@ -9,8 +9,7 @@
 
 ##  Table of Contents
 
-1. [About the Project](#about-the-project)  
-   └ [Built With](#built-with)  
+1. [About the Project](#about-the-project)   
 2. [Getting Started](#getting-started)  
    └ [Dependencies](#dependencies)    
 3. [Repository Structure](#repository-structure)  
