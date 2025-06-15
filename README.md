@@ -16,7 +16,8 @@
    └ [Installation](#installation)  
 3. [Repository Structure](#repository-structure)  
 4. [Usage](#usage)  
-5. [Authors](#authors)
+5. [Roadmap](#roadmap)  
+6. [Authors](#authors)
 
 ---
 
@@ -87,6 +88,15 @@ pip install -r requirements.txt
 ```bash
 python main/model_pipeline.py
 ```
+
+---
+
+## 🧭 Roadmap
+
+Earlier versions of this project suffered from **data leakage**, where preprocessing (e.g., imputation and scaling) occurred before train-test splitting.  
+To address this, we implemented a modular, reproducible **pipeline architecture** that performs all steps (imputation, SMOTE, scaling, classification) inside a single `sklearn` or `imbalanced-learn` pipeline.  
+This pipeline is evaluated with **nested cross-validation** to ensure fair model comparison and unbiased estimates.  
+Earlier exploratory workflows and experiments can be found in the `/archive` directory.
 
 ---
 
