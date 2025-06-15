@@ -14,9 +14,9 @@
 2. [Getting Started](#getting-started)  
    └ [Dependencies](#dependencies)  
    └ [Installation](#installation)  
-3. [Usage](#usage)  
-   └ [Repository Structure](#repository-structure)  
-4. [Authors](#authors)
+3. [Repository Structure](#repository-structure)  
+4. [Usage](#usage)  
+5. [Authors](#authors)
 
 ---
 
@@ -47,33 +47,6 @@ This project depends on the following libraries:
 
 ---
 
-## 🛠️ Usage
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/mettlrob/FoDS-Diabetes-Diagnosis.git
-cd FoDS-Diabetes-Diagnosis
-```
-
-### 2. Set up the environment
-
-We recommend using a virtual environment:
-
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 3. Run the main script
-
-```bash
-python main/model_pipeline.py
-```
-
----
-
 ## 📁 Repository Structure
 
 ```
@@ -86,6 +59,33 @@ FoDS-Diabetes-Diagnosis/
 ├── archive/               # Deprecated or older scripts
 ├── README.md              # This file
 └── diabetes_Pima_paper.pdf # PDF writeup of the project
+```
+
+---
+
+## 🛠️ Usage
+
+To run the diabetes prediction pipeline:
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/mettlrob/FoDS-Diabetes-Diagnosis.git
+cd FoDS-Diabetes-Diagnosis
+```
+
+### 2. Set up the environment
+
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 3. Run the main script
+
+```bash
+python main/model_pipeline.py
 ```
 
 ---
