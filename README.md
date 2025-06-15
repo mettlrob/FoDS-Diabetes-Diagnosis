@@ -93,15 +93,14 @@ We recommend using a virtual environment:
    
 
 
-## Authors
+---
 
-Tobias Herrmann
+## 👥 Authors
 
-Michael Keller
-
-Robin Mettler
-
-Georg Weber
+- **Tobias Herrmann**  
+- **Michael Keller**  
+- **Robin Mettler**  
+- **Georg Weber**
 
 
 
