@@ -78,7 +78,7 @@ We recommend using a virtual environment:
 
 
 
-## 📁 Repository Structure
+## Repository Structure
    ```bash
    
    FoDS-Diabetes-Diagnosis/
@@ -91,7 +91,6 @@ We recommend using a virtual environment:
    ├── README.md              # This file
    └── diabetes_Pima_paper.pdf # PDF writeup of the project
    
-
 
 
 ## Authors
