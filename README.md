@@ -57,7 +57,7 @@ FoDS-Diabetes-Diagnosis/
 ├── support/               # Helper functions and utilities
 ├── archive/               # Deprecated or older scripts
 ├── README.md              # This file
-└── diabetes_Pima_paper.pdf # PDF writeup of the project
+
 ```
 
 ---
